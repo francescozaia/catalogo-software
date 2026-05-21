@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Analisi catalogo del software open source — Pannello salute repository</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;1,400&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ──────────────────────────────────────────────────────────────
+     Bootstrap Italia Design System — token applicati al pannello.
+     I nomi delle variabili "legacy" (--bg, --panel, --accent…) sono
+     mantenuti e rimappati alla palette istituzionale PA, così il JS
+     che li referenzia continua a funzionare senza modifiche.
+     ────────────────────────────────────────────────────────────── */
+  :root {
+    /* Palette Bootstrap Italia */
+    --it-primary:hsl(210,100%,40%); --it-primary-hover:hsl(210,100%,30%); --it-primary-active:hsl(210,100%,15%);
+    --it-primary-lighter:hsl(210,62%,97%); --it-dark:hsl(210,54%,20%);
+    --it-slim:hsl(210,100%,20%); --it-navbar:hsl(210,100%,40%); --it-navbar-active:hsl(210,100%,30%);
+    --it-gray-100:hsl(0,0%,96%);
+    --font-sans:'Titillium Web',Geneva,Tahoma,system-ui,sans-serif;
+    --font-serif:'Lora',Georgia,serif;
+    --font-mono:'Roboto Mono',ui-monospace,SFMono-Regular,monospace;
+    --header-h:150px;
+    /* Mappatura nomi legacy → palette PA (light, istituzionale) */
+    --bg:hsl(0,0%,97%); --panel:#ffffff; --panel2:hsl(210,62%,97%); --border:hsl(210,4%,82%);
+    --text:hsl(0,0%,10%); --muted:hsl(210,17%,44%);
+    --accent:hsl(210,100%,30%); --accent2:hsl(210,100%,40%);
+    --good:hsl(160,100%,25%); --warn:hsl(36,100%,30%); --bad:hsl(350,60%,50%);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 var(--font-sans); background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  a { color:var(--accent2); text-decoration:none; }
+  a:hover { text-decoration:underline; color:var(--it-primary-hover); }
+
+  /* Header istituzionale a 3 livelli (slim / main / navbar) */
+  header.site { position:sticky; top:0; z-index:30; }
+  .it-slim { background:var(--it-slim); color:#fff; font-size:12px; }
+  .it-slim .wrap { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:7px 20px; flex-wrap:wrap; }
+  .it-slim .brand { display:flex; align-items:center; gap:8px; font-weight:600; letter-spacing:.01em; }
+  .it-slim .dot { width:8px; height:8px; border-radius:50%; background:#fff; flex-shrink:0; }
+  .it-slim .meta { color:rgba(255,255,255,.72); }
+  .it-main { background:#fff; border-bottom:1px solid var(--border); }
+  .it-main .wrap { display:flex; align-items:center; gap:18px; padding:14px 20px; flex-wrap:wrap; }
+  .it-crest { width:52px; height:52px; border-radius:50%; background:var(--it-primary-lighter); color:var(--it-primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .it-titles h1 { margin:0; font-size:21px; font-weight:700; line-height:1.2; letter-spacing:-.01em; }
+  .it-titles .sub { font-size:13px; color:var(--muted); margin-top:1px; }
+  header .stats { margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); }
+  header .stats b { color:var(--it-primary); font-weight:700; font-family:var(--font-mono); }
+
+  main { display:grid; grid-template-columns:288px 1fr; }
+  main[hidden] { display:none; }
+  aside { background:#fff; border-right:1px solid var(--border); padding:16px; overflow-y:auto; height:calc(100vh - var(--header-h)); }
+  aside h2 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--it-primary); font-weight:700; margin:18px 0 8px; }
+  aside h2:first-child { margin-top:0; }
+  aside label { display:block; font-size:13px; margin-bottom:8px; }
+  aside input[type=text], aside select { width:100%; padding:8px 10px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; }
+  aside input[type=text]:focus, aside select:focus { outline:none; border-color:var(--it-primary); box-shadow:0 0 0 3px hsla(210,100%,40%,.16); }
+  aside input[type=range] { width:100%; accent-color:var(--it-primary); }
+  aside .toggle { display:flex; gap:6px; flex-wrap:wrap; }
+  aside .toggle button { flex:1; min-width:62px; padding:6px 10px; background:#fff; color:var(--muted); border:1px solid var(--border); border-radius:50rem; cursor:pointer; font:inherit; font-size:12px; font-weight:600; transition:all .2s ease-in-out; }
+  aside .toggle button:hover { border-color:var(--it-primary); color:var(--it-primary); background:var(--it-primary-lighter); }
+  aside .toggle button.active { background:var(--it-primary); color:#fff; border-color:var(--it-primary); }
+  aside .range-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:6px; }
+  aside .range-row input[type=number] { width:64px; padding:5px 6px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; }
+  aside .weights { display:grid; gap:10px; }
+  aside .weights .w { display:grid; grid-template-columns:1fr auto; font-size:12px; font-weight:600; }
+  aside .weights .w span { font-family:var(--font-mono); color:var(--it-primary); }
+  aside .reset { width:100%; margin-top:14px; padding:9px; background:#fff; color:var(--it-primary); border:1px solid var(--it-primary); border-radius:4px; cursor:pointer; font:inherit; font-weight:600; text-transform:uppercase; font-size:12px; letter-spacing:.02em; transition:all .2s ease-in-out; }
+  aside .reset:hover { background:var(--it-primary); color:#fff; }
+
+  section.table-wrap { padding:0; overflow:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
+  table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+  th, td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+  thead th { position:sticky; top:0; background:var(--it-dark); color:#fff; cursor:pointer; user-select:none; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; z-index:5; }
+  thead th:hover { background:hsl(210,54%,27%); }
+  thead th.sorted::after { content:"\00a0▼"; font-size:9px; }
+  thead th.sorted.asc::after { content:"\00a0▲"; }
+  tbody tr { cursor:pointer; transition:background .15s; }
+  tbody tr:nth-child(even) { background:hsl(0,0%,98.5%); }
+  tbody tr:hover { background:var(--it-primary-lighter); }
+  tbody td.num { text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  tbody td.score { font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  .repo-cell > div:first-child { font-weight:600; }
+  .score-bar { display:inline-block; width:34px; height:6px; background:var(--it-gray-100); border-radius:50rem; overflow:hidden; margin-left:6px; vertical-align:middle; }
+  .score-bar > i { display:block; height:100%; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:50rem; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-family:var(--font-sans); }
+  .badge.riuso { background:var(--it-dark); color:#fff; }
+  .badge.os { background:var(--it-primary-lighter); color:var(--it-primary); }
+  .badge.arch { background:hsl(350,80%,95%); color:var(--bad); }
+  .badge.obs { background:var(--it-gray-100); color:var(--muted); }
+  .badge.prov { background:#fff; color:var(--muted); border:1px solid var(--border); margin-left:4px; }
+  .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); }
+
+  /* Drawer dettaglio */
+  #drawer { position:fixed; top:0; right:0; height:100vh; width:520px; max-width:90vw; background:#fff; border-left:1px solid var(--border); box-shadow:-12px 0 32px rgba(0,0,0,.12); transform:translateX(100%); transition:transform .2s ease-in-out; overflow-y:auto; z-index:50; }
+  #drawer.open { transform:translateX(0); }
+  #drawer .head { padding:16px 18px; background:var(--it-primary-lighter); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  #drawer .head h3 { margin:0 0 4px; font-size:16px; font-weight:700; }
+  #drawer .head p { margin:0; color:var(--muted); font-size:13px; }
+  #drawer .head button { background:transparent; color:var(--muted); border:0; font-size:24px; cursor:pointer; line-height:1; }
+  #drawer .head button:hover { color:var(--it-primary); }
+  #drawer .body { padding:16px 18px; }
+  #drawer .group { margin-bottom:18px; }
+  #drawer .group h4 { margin:0 0 6px; font-size:11px; text-transform:uppercase; color:var(--it-primary); font-weight:700; letter-spacing:.05em; }
+  #drawer .group dl { display:grid; grid-template-columns:1fr auto; gap:5px 14px; margin:0; font-size:13px; }
+  #drawer .group dt { color:var(--muted); }
+  #drawer .group dd { margin:0; text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
+  #drawer .desc { color:var(--it-dark); font-family:var(--font-serif); font-size:14px; font-style:italic; line-height:1.6; padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:16px; }
+  #backdrop { position:fixed; inset:0; background:rgba(33,40,51,.45); display:none; z-index:40; }
+  #backdrop.show { display:block; }
+
+  .empty { padding:60px 20px; text-align:center; color:var(--muted); }
+
+  /* Navbar tab (stile Bootstrap Italia) */
+  .tabs { background:var(--it-navbar); display:flex; align-items:stretch; padding:0 12px; }
+  .tabs button { background:transparent; color:#fff; border:none; border-bottom:3px solid transparent; padding:13px 18px; cursor:pointer; font-family:var(--font-sans); font-weight:600; font-size:14px; transition:background .2s ease-in-out; }
+  .tabs button:hover { background:var(--it-navbar-active); }
+  .tabs button.active,
+  .tabs button[aria-expanded="true"]{ background:var(--it-navbar-active); border-bottom-color:#fff; }
+  /* Pulsante mostra/nascondi filtri nella navbar */
+  .tabs-action { align-self:center; margin-left:auto; margin-right:4px; display:inline-flex; align-items:center; gap:7px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.45); padding:6px 14px; font-family:var(--font-sans); font-weight:600; font-size:13px; cursor:pointer; transition:all .2s ease-in-out; }
+  .tabs-action:hover { background:var(--it-navbar-active); }
+  .tabs-action svg { display:block; }
+
+  /* Sidebar filtri comprimibile su desktop: senza .filters-open la tabella usa
+     tutta la larghezza disponibile. */
+  main#view-catalogo { grid-template-columns:1fr; }
+  main#view-catalogo.filters-open { grid-template-columns:288px 1fr; }
+  main#view-catalogo > aside { display:none; }
+  main#view-catalogo.filters-open > aside { display:block; }
+
+  #filters-backdrop { position:fixed; inset:0; top:var(--header-h); background:rgba(33,40,51,.4); display:none; z-index:44; }
+  #filters-backdrop.show { display:block; }
+
+  /* Su mobile la sidebar diventa un pannello off-canvas che scorre da sinistra
+     sopra il contenuto, lasciando alla tabella tutta la larghezza. */
+  @media (max-width: 860px) {
+    main#view-catalogo, main#view-catalogo.filters-open { grid-template-columns:1fr; }
+    main#view-catalogo > aside {
+      display:block; position:fixed; top:var(--header-h); left:0; bottom:0; height:auto;
+      width:280px; max-width:85vw; z-index:45;
+      transform:translateX(-100%); transition:transform .2s ease-in-out;
+      box-shadow:6px 0 28px rgba(0,0,0,.18);
+    }
+    main#view-catalogo.filters-open > aside { transform:translateX(0); }
+  }
+
+  /* Info view */
+  #view-info { padding:0; overflow-y:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
+  #view-info[hidden] { display:none; }
+  .info-wrap { max-width:940px; margin:0 auto; padding:40px 32px 80px; }
+  .info-wrap h2 { font-size:28px; font-weight:700; margin:0 0 8px; letter-spacing:-.01em; }
+  .info-wrap h3 { font-size:20px; font-weight:700; color:var(--it-dark); margin:38px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--it-primary); }
+  .info-wrap h4 { font-size:15px; font-weight:700; margin:24px 0 8px; color:var(--it-primary); }
+  .info-wrap p { color:var(--text); margin:0 0 10px; }
+  .info-wrap p.lead { font-family:var(--font-serif); font-style:italic; font-size:16px; color:var(--it-dark); line-height:1.6; margin-bottom:24px; }
+  .info-wrap ul, .info-wrap ol { padding-left:22px; margin:6px 0 12px; color:var(--text); }
+  .info-wrap li { margin:5px 0; }
+  .info-wrap code { background:var(--it-primary-lighter); color:var(--it-primary-active); font-family:var(--font-mono); padding:1px 6px; border-radius:4px; font-size:12.5px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin:8px 0 12px; }
+  .kpi { background:#fff; border:1px solid var(--border); border-left:4px solid var(--it-primary); border-radius:4px; padding:14px 16px; }
+  .kpi-v { font-size:26px; font-weight:700; color:var(--it-primary); font-family:var(--font-mono); }
+  .kpi-l { font-size:12px; color:var(--text); margin-top:2px; font-weight:600; }
+  .kpi-n { font-size:11.5px; color:var(--muted); margin-top:4px; }
+  .bars { display:flex; flex-direction:column; gap:6px; margin:6px 0 14px; }
+  .bar-row { display:grid; grid-template-columns:170px 1fr auto; align-items:center; gap:10px; font-size:13px; }
+  .bar-l { color:var(--text); }
+  .bar-bg { background:var(--it-gray-100); height:10px; border-radius:50rem; overflow:hidden; }
+  .bar-bg > i { display:block; height:100%; background:var(--it-primary); }
+  .bar-v { font-family:var(--font-mono); min-width:92px; text-align:right; }
+  .bar-v em { color:var(--muted); font-style:normal; font-size:11px; }
+  .ranklist { padding-left:24px; }
+  .ranklist li { padding:4px 0; }
+  .ranklist .ml { color:var(--muted); margin-left:6px; font-size:12px; font-family:var(--font-mono); }
+  .ranklist b { color:var(--it-primary); margin-left:8px; font-family:var(--font-mono); }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width: 720px) { .cols { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="it-slim">
+    <div class="wrap">
+      <span class="brand"><span class="dot"></span> Developers Italia · Catalogo del software pubblico</span>
+      <span class="meta">Analisi salute repository · finestra metriche 90 giorni</span>
+    </div>
+  </div>
+  <div class="it-main">
+    <div class="wrap">
+      <div class="it-crest" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/>
+        </svg>
+      </div>
+      <div class="it-titles">
+        <h1>Analisi catalogo del software open source</h1>
+        <div class="sub">Pannello salute repository — coinvolgimento, velocità, qualità</div>
+      </div>
+      <div class="stats" id="topstats"></div>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button data-view="catalogo" class="active">Catalogo</button>
+    <button data-view="info">Metodologia &amp; findings</button>
+    <button id="filtersToggle" class="tabs-action" type="button" aria-expanded="true" aria-controls="view-catalogo" title="Mostra/nascondi i filtri">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+      Filtri
+    </button>
+  </nav>
+</header>
+
+<main id="view-catalogo" class="filters-open">
+  <aside>
+    <h2>Ricerca</h2>
+    <label><input id="q" type="text" placeholder="nome, ente, repo…"></label>
+
+    <h2>Tipo</h2>
+    <div class="toggle" id="kind">
+      <button data-v="all" class="active">Tutti</button>
+      <button data-v="riuso">A riuso</button>
+      <button data-v="os">Open source</button>
+    </div>
+
+    <h2>Provider</h2>
+    <div class="toggle" id="provider">
+      <button data-v="all" class="active">Tutti</button>
+      <button data-v="github">GitHub</button>
+      <button data-v="gitlab">GitLab</button>
+      <button data-v="bitbucket">Bitbucket</button>
+    </div>
+
+    <h2>Stato repo</h2>
+    <div class="toggle" id="active">
+      <button data-v="any" class="active">Tutti</button>
+      <button data-v="active">Attivi</button>
+      <button data-v="archived">Archiviati</button>
+    </div>
+
+    <h2>Filtri rapidi</h2>
+    <div class="toggle" id="quick">
+      <button data-v="ci">Solo con CI</button>
+      <button data-v="rev">Review≥50%</button>
+      <button data-v="recent">Push ≤90gg</button>
+      <button data-v="dep">Dependabot</button>
+    </div>
+
+    <h2>Lingua</h2>
+    <label><select id="lang"><option value="">Tutte</option></select></label>
+
+    <h2>Licenza</h2>
+    <label><select id="lic"><option value="">Tutte</option></select></label>
+
+    <h2>Giorni dall'ultimo commit</h2>
+    <div class="range-row">≤ <input id="maxStale" type="number" min="0" placeholder="∞"> gg</div>
+
+    <h2>Commit ultimi 90gg</h2>
+    <div class="range-row">≥ <input id="minCommits" type="number" min="0" placeholder="0"></div>
+
+    <h2>Pesi score</h2>
+    <div class="weights">
+      <div class="w"><label>Freshness</label><span id="wF-val">25</span></div>
+      <input id="wF" type="range" min="0" max="100" value="25">
+      <div class="w"><label>Velocity</label><span id="wV-val">25</span></div>
+      <input id="wV" type="range" min="0" max="100" value="25">
+      <div class="w"><label>Quality</label><span id="wQ-val">25</span></div>
+      <input id="wQ" type="range" min="0" max="100" value="25">
+      <div class="w"><label>Maintenance</label><span id="wM-val">25</span></div>
+      <input id="wM" type="range" min="0" max="100" value="25">
+    </div>
+
+    <button class="reset" id="reset">Reset filtri</button>
+    <button class="reset" id="exportCsv" style="margin-top:6px;">Esporta CSV (filtrati)</button>
+  </aside>
+
+  <section class="table-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-k="score" data-num="1" class="sorted">Score</th>
+          <th data-k="catalog_name">Software</th>
+          <th data-k="organisation_label">Ente / Owner</th>
+          <th data-k="primary_language">Lang</th>
+          <th data-k="license">Licenza</th>
+          <th data-k="days_since_last_commit" data-num="1">Ultimo commit</th>
+          <th data-k="commits_in_window" data-num="1">Commit 90gg</th>
+          <th data-k="pr_merged_in_window" data-num="1">PR merged</th>
+          <th data-k="pr_median_lead_time_days" data-num="1">Lead time</th>
+          <th data-k="pr_review_coverage_pct" data-num="1">Review %</th>
+          <th data-k="issues_open_now" data-num="1">Issue aperte</th>
+          <th data-k="has_ci" data-num="1">CI</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty" class="empty" hidden>Nessun risultato.</div>
+  </section>
+</main>
+
+__INFO__
+
+<div id="filters-backdrop"></div>
+<div id="backdrop"></div>
+<div id="drawer" aria-hidden="true">
+  <div class="head">
+    <div>
+      <h3 id="d-title">—</h3>
+      <p id="d-sub">—</p>
+    </div>
+    <button id="d-close">×</button>
+  </div>
+  <div class="body" id="d-body"></div>
+</div>
+
+<script>
+const DATA = __DATA__;
+
+// === Scoring ===
+function freshnessScore(r) {
+  if (r.archived || r.disabled) return 0;
+  const d = num(r.days_since_last_commit);
+  if (d === null) return 0;
+  if (d <= 14) return 100;
+  if (d <= 30) return 85;
+  if (d <= 90) return 65;
+  if (d <= 180) return 40;
+  if (d <= 365) return 15;
+  return 0;
+}
+function velocityScore(r) {
+  const c = num(r.commits_in_window) ?? 0;
+  let commitsScore = 0;
+  if (c >= 60) commitsScore = 100;
+  else if (c >= 30) commitsScore = 80;
+  else if (c >= 10) commitsScore = 60;
+  else if (c >= 3) commitsScore = 40;
+  else if (c > 0) commitsScore = 20;
+
+  const pr = num(r.pr_merged_in_window) ?? 0;
+  const lead = num(r.pr_median_lead_time_days);
+  let prScore = 0;
+  if (pr > 0 && lead !== null) {
+    if (lead <= 3) prScore = 100;
+    else if (lead <= 7) prScore = 85;
+    else if (lead <= 14) prScore = 70;
+    else if (lead <= 30) prScore = 50;
+    else if (lead <= 60) prScore = 30;
+    else prScore = 15;
+  }
+  return Math.round(commitsScore * 0.6 + prScore * 0.4);
+}
+function qualityScore(r) {
+  const rev = num(r.pr_review_coverage_pct);
+  const revScore = (rev === null) ? 0 : rev;
+  const ciScore = r.has_ci ? 100 : 0;
+  const bus = num(r.bus_factor_top1_pct);
+  let busScore = 50;
+  if (bus !== null) {
+    if (bus <= 40) busScore = 100;
+    else if (bus <= 60) busScore = 80;
+    else if (bus <= 80) busScore = 50;
+    else if (bus <= 95) busScore = 25;
+    else busScore = 10;
+  }
+  return Math.round(revScore * 0.4 + ciScore * 0.3 + busScore * 0.3);
+}
+function maintenanceScore(r) {
+  const oldest = num(r.oldest_open_issue_days);
+  let oldestScore = 100;
+  if (oldest !== null) {
+    if (oldest >= 730) oldestScore = 0;
+    else if (oldest >= 365) oldestScore = 30;
+    else if (oldest >= 90) oldestScore = 60;
+  }
+  const opened = num(r.issues_opened_in_window) ?? 0;
+  const closeRatio = num(r.issue_close_ratio_pct);
+  let closeScore;
+  if (opened === 0) closeScore = 60;
+  else closeScore = closeRatio ?? 0;
+  const depPr = num(r.dependabot_pr_in_window) ?? 0;
+  const hasDep = (r.dependency_files || "").length > 0;
+  let depScore = 30;
+  if (depPr > 0) depScore = 90;
+  else if (hasDep) depScore = 55;
+  let relScore = 0;
+  if (r.latest_release_date) {
+    const days = (Date.now() - new Date(r.latest_release_date).getTime()) / 86400000;
+    if (days < 180) relScore = 100;
+    else if (days < 365) relScore = 60;
+    else if (days < 730) relScore = 30;
+  }
+  return Math.round(oldestScore * 0.25 + closeScore * 0.25 + depScore * 0.25 + relScore * 0.25);
+}
+function totalScore(r, w) {
+  const fr = freshnessScore(r);
+  const vl = velocityScore(r);
+  const ql = qualityScore(r);
+  const mt = maintenanceScore(r);
+  const tot = w.f + w.v + w.q + w.m;
+  if (!tot) return 0;
+  return Math.round((fr * w.f + vl * w.v + ql * w.q + mt * w.m) / tot);
+}
+
+// === Helpers ===
+function num(x) {
+  if (x === null || x === undefined || x === "") return null;
+  const n = Number(x);
+  return Number.isFinite(n) ? n : null;
+}
+function fmtDate(s) { if (!s) return "—"; return s.substring(0, 10); }
+function fmtDays(d) { if (d === null || d === undefined || d === "") return "—"; if (d < 1) return "<1g"; if (d < 365) return d + "g"; return (d/365).toFixed(1) + "a"; }
+function fmtPct(p) { if (p === null || p === undefined || p === "") return "—"; return p + "%"; }
+function fmtNum(n) { if (n === null || n === undefined || n === "") return "—"; return String(n); }
+function color(score) {
+  if (score >= 75) return "var(--good)";
+  if (score >= 50) return "var(--accent2)";
+  if (score >= 30) return "var(--warn)";
+  return "var(--bad)";
+}
+function ownerOf(url) { try { const p = new URL(url).pathname.split('/').filter(Boolean); return p[0] || ""; } catch { return ""; } }
+
+// === State ===
+const state = {
+  q: "", kind: "all", active: "any", provider: "all",
+  quick: new Set(),
+  lang: "", lic: "",
+  maxStale: "", minCommits: "",
+  sort: { k: "score", asc: false },
+  weights: { f: 25, v: 25, q: 25, m: 25 },
+};
+
+// Precompute organisation labels
+for (const r of DATA) {
+  r.organisation_label = r.codice_ipa ? `IPA:${r.codice_ipa}` : ownerOf(r.url || "");
+}
+
+// Build options
+const langs = new Set(), licenses = new Set();
+for (const r of DATA) {
+  if (r.primary_language) langs.add(r.primary_language);
+  if (r.license) licenses.add(r.license);
+}
+const langSel = document.getElementById("lang");
+[...langs].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; langSel.appendChild(o); });
+const licSel = document.getElementById("lic");
+[...licenses].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; licSel.appendChild(o); });
+
+// === Filter & sort ===
+function filterRow(r) {
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    const hay = (r.catalog_name + " " + (r.name_with_owner || "") + " " + (r.organisation_label || "") + " " + (r.codice_ipa || "")).toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  if (state.kind === "riuso" && !r.is_riuso) return false;
+  if (state.kind === "os" && r.is_riuso) return false;
+  if (state.provider !== "all" && (r.provider || "github") !== state.provider) return false;
+  if (state.active === "active" && (r.archived || r.disabled)) return false;
+  if (state.active === "archived" && !(r.archived || r.disabled)) return false;
+  if (state.lang && r.primary_language !== state.lang) return false;
+  if (state.lic && r.license !== state.lic) return false;
+  if (state.quick.has("ci") && !r.has_ci) return false;
+  if (state.quick.has("rev") && !(num(r.pr_review_coverage_pct) >= 50)) return false;
+  if (state.quick.has("recent") && !(num(r.days_since_last_commit) !== null && num(r.days_since_last_commit) <= 90)) return false;
+  if (state.quick.has("dep") && !(num(r.dependabot_pr_in_window) > 0)) return false;
+  if (state.maxStale !== "" && !(num(r.days_since_last_commit) !== null && num(r.days_since_last_commit) <= +state.maxStale)) return false;
+  if (state.minCommits !== "" && !((num(r.commits_in_window) ?? 0) >= +state.minCommits)) return false;
+  if (r.error) return false;
+  return true;
+}
+
+function compute() {
+  const w = state.weights;
+  for (const r of DATA) r.score = r.error ? 0 : totalScore(r, w);
+}
+
+function render() {
+  compute();
+  const rows = DATA.filter(filterRow);
+  const k = state.sort.k, asc = state.sort.asc;
+  rows.sort((a, b) => {
+    let av = a[k], bv = b[k];
+    if (k === "catalog_name" || k === "organisation_label" || k === "primary_language" || k === "license") {
+      av = (av || "").toString().toLowerCase(); bv = (bv || "").toString().toLowerCase();
+      return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    av = num(av); bv = num(bv);
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    return asc ? av - bv : bv - av;
+  });
+
+  const tbody = document.getElementById("tbody");
+  tbody.innerHTML = rows.map(r => rowHtml(r)).join("");
+  document.getElementById("empty").hidden = rows.length > 0;
+
+  // top stats
+  const total = DATA.length;
+  const shown = rows.length;
+  const riuso = DATA.filter(r => r.is_riuso && !r.error).length;
+  const os = DATA.filter(r => !r.is_riuso && !r.error).length;
+  const archived = DATA.filter(r => r.archived || r.disabled).length;
+  const stale = DATA.filter(r => num(r.days_since_last_commit) > 365).length;
+  const medScore = rows.length ? rows.map(r=>r.score).sort((a,b)=>a-b)[Math.floor(rows.length/2)] : 0;
+  document.getElementById("topstats").innerHTML = `
+    <span><b>${shown}</b>/${total} repo</span>
+    <span>A riuso: <b>${riuso}</b></span>
+    <span>Open source: <b>${os}</b></span>
+    <span>Archiviati: <b>${archived}</b></span>
+    <span>Inattivi >1 anno: <b>${stale}</b></span>
+    <span>Score mediano (filtrati): <b>${medScore}</b></span>
+  `;
+
+  // sort indicator
+  document.querySelectorAll("thead th").forEach(th => {
+    th.classList.toggle("sorted", th.dataset.k === k);
+    th.classList.toggle("asc", th.dataset.k === k && asc);
+  });
+}
+
+function rowHtml(r) {
+  const score = r.score ?? 0;
+  const sc = color(score);
+  return `<tr data-url="${escapeHtml(r.url)}">
+    <td class="num score" style="color:${sc}">${score}<span class="score-bar"><i style="width:${score}%;background:${sc}"></i></span></td>
+    <td class="repo-cell">
+      <div>${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${(r.provider && r.provider !== 'github') ? `<span class="badge prov">${r.provider==='gitlab'?'GL':'BB'}</span>` : ''}</div>
+      <div class="org"><a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || (r.url || "").replace('https://github.com/',''))}</a></div>
+    </td>
+    <td>${r.is_riuso ? `<span class="badge riuso">IPA:${escapeHtml(r.codice_ipa)}</span>` : `<span class="badge os">${escapeHtml(ownerOf(r.url || ''))}</span>`}</td>
+    <td>${escapeHtml(r.primary_language || "—")}</td>
+    <td>${escapeHtml(r.license || "—")}</td>
+    <td class="num">${fmtDays(num(r.days_since_last_commit))}${r.archived ? ' <span class="badge arch">archiv.</span>' : ''}</td>
+    <td class="num">${fmtNum(r.commits_in_window)}</td>
+    <td class="num">${fmtNum(r.pr_merged_in_window)}</td>
+    <td class="num">${fmtNum(r.pr_median_lead_time_days)}</td>
+    <td class="num">${fmtPct(r.pr_review_coverage_pct)}</td>
+    <td class="num">${fmtNum(r.issues_open_now)}</td>
+    <td class="num">${r.has_ci ? '✓' : '—'}</td>
+  </tr>`;
+}
+
+function escapeHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// === Drawer ===
+function openDrawer(url) {
+  const r = DATA.find(x => x.url === url);
+  if (!r) return;
+  document.getElementById("d-title").textContent = r.catalog_name || r.name_with_owner || url;
+  document.getElementById("d-sub").innerHTML = `<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || r.url)}</a>${r.codice_ipa ? ` — IPA <b>${escapeHtml(r.codice_ipa)}</b>` : ''}`;
+  const w = state.weights;
+  const fr = freshnessScore(r), vl = velocityScore(r), ql = qualityScore(r), mt = maintenanceScore(r);
+  const body = document.getElementById("d-body");
+  body.innerHTML = `
+    ${r.short_description ? `<div class="desc">${escapeHtml(r.short_description)}</div>` : ''}
+    <div class="group">
+      <h4>Score composito (peso applicato)</h4>
+      <dl>
+        <dt>Totale</dt><dd style="color:${color(r.score)};font-weight:600">${r.score}</dd>
+        <dt>Freshness (peso ${w.f})</dt><dd>${fr}</dd>
+        <dt>Velocity (peso ${w.v})</dt><dd>${vl}</dd>
+        <dt>Quality (peso ${w.q})</dt><dd>${ql}</dd>
+        <dt>Maintenance (peso ${w.m})</dt><dd>${mt}</dd>
+      </dl>
+    </div>
+    <div class="group">
+      <h4>Stato</h4>
+      <dl>
+        <dt>Catalog status</dt><dd>${escapeHtml(r.development_status || '—')}</dd>
+        <dt>Release date (cat.)</dt><dd>${escapeHtml(r.release_date || '—')}</dd>
+        <dt>Linguaggio</dt><dd>${escapeHtml(r.primary_language || '—')}</dd>
+        <dt>Licenza</dt><dd>${escapeHtml(r.license || '—')}</dd>
+        <dt>Fork</dt><dd>${r.fork ? 'sì' : 'no'}</dd>
+        <dt>Archiviato</dt><dd>${r.archived ? 'sì' : 'no'}</dd>
+      </dl>
+    </div>
+    <div class="group">
+      <h4>Attività commit (90gg)</h4>
+      <dl>
+        <dt>Commit</dt><dd>${fmtNum(r.commits_in_window)}</dd>
+        <dt>Giorni attivi</dt><dd>${fmtNum(r.active_days_in_window)}</dd>
+        <dt>Autori</dt><dd>${fmtNum(r.commit_authors_in_window)}</dd>
+        <dt>Bus factor top-1</dt><dd>${fmtPct(r.bus_factor_top1_pct)}</dd>
+        <dt>Ultimo commit</dt><dd>${fmtDate(r.last_commit_date)}</dd>
+      </dl>
+    </div>
+    <div class="group">
+      <h4>Pull request (90gg)</h4>
+      <dl>
+        <dt>PR aperte</dt><dd>${fmtNum(r.pr_total_in_window)}</dd>
+        <dt>PR mergeate</dt><dd>${fmtNum(r.pr_merged_in_window)}</dd>
+        <dt>Lead time mediano (g)</dt><dd>${fmtNum(r.pr_median_lead_time_days)}</dd>
+        <dt>Lead time p90 (g)</dt><dd>${fmtNum(r.pr_p90_lead_time_days)}</dd>
+        <dt>Review coverage</dt><dd>${fmtPct(r.pr_review_coverage_pct)}</dd>
+        <dt>Autori distinti</dt><dd>${fmtNum(r.pr_distinct_authors_in_window)}</dd>
+      </dl>
+    </div>
+    <div class="group">
+      <h4>Issue</h4>
+      <dl>
+        <dt>Aperte ora</dt><dd>${fmtNum(r.issues_open_now)}</dd>
+        <dt>Più vecchia aperta</dt><dd>${fmtDays(num(r.oldest_open_issue_days))}</dd>
+        <dt>Aperte (90gg)</dt><dd>${fmtNum(r.issues_opened_in_window)}</dd>
+        <dt>Chiuse (90gg)</dt><dd>${fmtNum(r.issues_closed_in_window)}</dd>
+        <dt>Tasso chiusura</dt><dd>${fmtPct(r.issue_close_ratio_pct)}</dd>
+        <dt>Tempo chiusura mediano</dt><dd>${fmtNum(r.median_issue_close_time_days)} g</dd>
+      </dl>
+    </div>
+    <div class="group">
+      <h4>Manutenzione</h4>
+      <dl>
+        <dt>PR Dependabot (90gg)</dt><dd>${fmtNum(r.dependabot_pr_in_window)}</dd>
+        <dt>File dipendenze</dt><dd>${escapeHtml(r.dependency_files || '—')}</dd>
+        <dt>CI</dt><dd>${r.has_ci ? 'sì' : 'no'}</dd>
+        <dt>Release totali</dt><dd>${fmtNum(r.releases_total)}</dd>
+        <dt>Ultima release</dt><dd>${fmtDate(r.latest_release_date)}</dd>
+      </dl>
+    </div>`;
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("backdrop").classList.add("show");
+}
+function closeDrawer() {
+  document.getElementById("drawer").classList.remove("open");
+  document.getElementById("backdrop").classList.remove("show");
+}
+
+// === Wire up ===
+document.getElementById("q").addEventListener("input", e => { state.q = e.target.value.trim(); render(); });
+document.querySelectorAll("#kind button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#kind button").forEach(x => x.classList.remove("active"));
+  b.classList.add("active"); state.kind = b.dataset.v; render();
+}));
+document.querySelectorAll("#active button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#active button").forEach(x => x.classList.remove("active"));
+  b.classList.add("active"); state.active = b.dataset.v; render();
+}));
+document.querySelectorAll("#provider button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#provider button").forEach(x => x.classList.remove("active"));
+  b.classList.add("active"); state.provider = b.dataset.v; render();
+}));
+document.querySelectorAll("#quick button").forEach(b => b.addEventListener("click", () => {
+  b.classList.toggle("active");
+  if (state.quick.has(b.dataset.v)) state.quick.delete(b.dataset.v); else state.quick.add(b.dataset.v);
+  render();
+}));
+document.getElementById("lang").addEventListener("change", e => { state.lang = e.target.value; render(); });
+document.getElementById("lic").addEventListener("change", e => { state.lic = e.target.value; render(); });
+document.getElementById("maxStale").addEventListener("input", e => { state.maxStale = e.target.value; render(); });
+document.getElementById("minCommits").addEventListener("input", e => { state.minCommits = e.target.value; render(); });
+
+["wF","wV","wQ","wM"].forEach((id, i) => {
+  const key = ["f","v","q","m"][i];
+  const el = document.getElementById(id);
+  el.addEventListener("input", () => {
+    state.weights[key] = +el.value;
+    document.getElementById(id + "-val").textContent = el.value;
+    render();
+  });
+});
+
+document.querySelectorAll("thead th").forEach(th => th.addEventListener("click", () => {
+  const k = th.dataset.k;
+  if (state.sort.k === k) state.sort.asc = !state.sort.asc;
+  else { state.sort.k = k; state.sort.asc = false; }
+  render();
+}));
+
+document.getElementById("tbody").addEventListener("click", e => {
+  const tr = e.target.closest("tr"); if (!tr) return;
+  if (e.target.tagName === "A") return;
+  openDrawer(tr.dataset.url);
+});
+document.getElementById("d-close").addEventListener("click", closeDrawer);
+document.getElementById("backdrop").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+
+document.getElementById("reset").addEventListener("click", () => {
+  state.q = ""; state.kind = "all"; state.active = "any"; state.provider = "all"; state.quick.clear();
+  state.lang = ""; state.lic = ""; state.maxStale = ""; state.minCommits = "";
+  state.weights = { f: 25, v: 25, q: 25, m: 25 };
+  document.getElementById("q").value = "";
+  document.getElementById("lang").value = "";
+  document.getElementById("lic").value = "";
+  document.getElementById("maxStale").value = "";
+  document.getElementById("minCommits").value = "";
+  ["wF","wV","wQ","wM"].forEach((id,i)=>{ document.getElementById(id).value = 25; document.getElementById(id+"-val").textContent = "25"; });
+  document.querySelectorAll("#kind button, #active button, #provider button").forEach(b => b.classList.toggle("active", b.dataset.v === "all" || b.dataset.v === "any"));
+  document.querySelectorAll("#quick button").forEach(b => b.classList.remove("active"));
+  render();
+});
+
+document.getElementById("exportCsv").addEventListener("click", () => {
+  const rows = DATA.filter(filterRow);
+  const cols = ["score","catalog_name","name_with_owner","url","organisation_label","is_riuso","codice_ipa","primary_language","license","days_since_last_commit","commits_in_window","commit_authors_in_window","bus_factor_top1_pct","pr_total_in_window","pr_merged_in_window","pr_median_lead_time_days","pr_p90_lead_time_days","pr_review_coverage_pct","issues_open_now","oldest_open_issue_days","issue_close_ratio_pct","dependabot_pr_in_window","dependency_files","has_ci","releases_total","latest_release_date","archived","fork"];
+  const esc = v => { if (v === null || v === undefined) return ""; const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
+  const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "catalogo_metriche_filtrate.csv";
+  a.click();
+});
+
+// ── Sidebar filtri: comprimibile su desktop, off-canvas su mobile ──
+const catalogoMain = document.getElementById("view-catalogo");
+const filtersToggle = document.getElementById("filtersToggle");
+const filtersBackdrop = document.getElementById("filters-backdrop");
+const mqMobile = window.matchMedia("(max-width: 860px)");
+
+function setFilters(open) {
+  catalogoMain.classList.toggle("filters-open", open);
+  filtersToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  // il backdrop serve solo quando la sidebar è un overlay (mobile)
+  filtersBackdrop.classList.toggle("show", open && mqMobile.matches);
+}
+filtersToggle.addEventListener("click", () => setFilters(!catalogoMain.classList.contains("filters-open")));
+filtersBackdrop.addEventListener("click", () => setFilters(false));
+// default sensato: aperta su desktop, chiusa su mobile; si riallinea al cambio viewport
+mqMobile.addEventListener("change", () => setFilters(!mqMobile.matches));
+setFilters(!mqMobile.matches);
+
+// Tab switching (solo i bottoni con data-view; il toggle filtri è escluso)
+document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button[data-view]").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  const v = b.dataset.view;
+  catalogoMain.hidden = v !== "catalogo";
+  const info = document.getElementById("view-info");
+  if (info) info.hidden = v !== "info";
+  // il toggle filtri ha senso solo nel catalogo; fuori, nascondilo e chiudi l'overlay
+  filtersToggle.style.display = (v === "catalogo") ? "" : "none";
+  if (v !== "catalogo") filtersBackdrop.classList.remove("show");
+  else if (mqMobile.matches && catalogoMain.classList.contains("filters-open")) filtersBackdrop.classList.add("show");
+  window.scrollTo(0, 0);
+}));
+
+// L'header istituzionale ha altezza variabile (3 livelli, contenuto che va a capo
+// su schermi stretti). Misuriamo l'altezza reale e la propaghiamo come --header-h
+// così sidebar, tabella e vista info restano alti esattamente quanto serve.
+function syncHeaderHeight() {
+  const h = document.querySelector("header.site");
+  if (h) document.documentElement.style.setProperty("--header-h", h.offsetHeight + "px");
+}
+syncHeaderHeight();
+window.addEventListener("resize", syncHeaderHeight);
+
+render();
+</script>
+</body>
+</html>

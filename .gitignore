@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Dati generati dagli script
+data/
+
+# Impostazioni locali di Claude Code
+.claude/settings.local.json
