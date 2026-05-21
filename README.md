@@ -1,6 +1,6 @@
 # Analisi catalogo del software open source
 
-_Disclaimer: quanto presente è un progetto personale basato su dati pubbgit lici_
+_Disclaimer: quanto presente è un progetto personale basato su dati pubblici_
 
 Pipeline per analizzare lo stato di salute del software open source e a riuso
 della Pubblica Amministrazione italiana, a partire dal
