@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from datetime import datetime
 from html import escape
 from pathlib import Path
 from statistics import median
@@ -189,14 +190,14 @@ def render_info_html(f: dict) -> str:
         )
 
     kpis = "".join([
-        kpi("Repository GitHub analizzati", f"{f['analyzed']}", f"+ {f['errors']} repo cancellati / non trovati"),
+        kpi("Repository analizzati", f"{f['analyzed']}", f"+ {f['errors']} non recuperabili (privati/cancellati)"),
         kpi("Inattivi >1 anno", f"{f['bucket_over_1y']}", f"{round(100*f['bucket_over_1y']/f['analyzed'],1)}% del campione"),
-        kpi("Abbandonati di fatto (non archiviati)", f"{f['silent_abandoned']}", f"{f['silent_pct']}% — solo {f['archived']} dichiarati"),
-        kpi("Mediana giorni dall'ultimo commit", f"{f['median_stale_days']}", "metà del catalogo sopra questa soglia"),
+        kpi("Inattivi >1 anno e non archiviati", f"{f['silent_abandoned']}", f"{f['silent_pct']}% del campione · {f['archived']} archiviati"),
+        kpi("Mediana giorni dall'ultimo commit", f"{f['median_stale_days']}", "metà dei repository ha un valore superiore"),
         kpi("Repo con CI configurato", f"{f['has_ci']}", f"{f['has_ci_pct']}% del campione"),
-        kpi("Repo con PR Dependabot attivo", f"{f['has_dependabot']}", f"{f['has_dependabot_pct']}% del campione"),
-        kpi("Repo con almeno 1 PR mergeata in 90gg", f"{f['repos_with_pr']}", "campione su cui si misurano lead time/review"),
-        kpi("…di cui senza alcuna review", f"{f['repos_with_pr_no_review']}", f"{f['repos_with_pr_no_review_pct']}% — merge senza verifica"),
+        kpi("Repo con PR Dependabot/Renovate", f"{f['has_dependabot']}", f"{f['has_dependabot_pct']}% del campione"),
+        kpi("Repo con ≥1 PR mergeata in 90gg", f"{f['repos_with_pr']}", "campione per lead time e review"),
+        kpi("…di cui senza review registrata", f"{f['repos_with_pr_no_review']}", f"{f['repos_with_pr_no_review_pct']}% del sottoinsieme"),
     ])
 
     activity_bars = "".join([
@@ -216,11 +217,13 @@ def render_info_html(f: dict) -> str:
   <div class="info-wrap">
     <h2>Metodologia & findings principali</h2>
     <p class="lead">
-      Estrazione completa del catalogo Developers Italia (518 software) e
-      raccolta delle metriche di salute per i 476 repository ospitati su GitHub.
-      Le metriche misurano <b>coinvolgimento, velocità e qualità del processo
-      di sviluppo</b>, deliberatamente escludendo segnali di facciata (stelle,
-      fork) che non riflettono salute manutentiva.
+      Catalogo di {f['total']} software; metriche di salute calcolate per
+      {f['analyzed']} repository pubblici (GitHub, GitLab, Bitbucket). Le metriche
+      descrivono coinvolgimento, velocità e qualità del processo di sviluppo —
+      ciclo delle pull request, copertura delle review, frequenza dei commit,
+      gestione delle issue, freschezza di codice e dipendenze — senza considerare
+      metriche di facciata come le stelle. Dati estratti dal catalogo pubblico di
+      Developers Italia.
     </p>
 
     <h3>1. Numeri chiave</h3>
@@ -228,56 +231,54 @@ def render_info_html(f: dict) -> str:
 
     <h3>2. Findings</h3>
 
-    <h4>Abbandono silente diffuso</h4>
+    <h4>Recency dell'attività</h4>
     <p>
-      <b>{f['silent_abandoned']} repository ({f['silent_pct']}% del campione)</b>
-      non ricevono commit da oltre un anno ma non sono dichiarati
-      <code>archived</code> su GitHub. Solo <b>{f['archived']}</b> sono
-      esplicitamente archiviati. Conseguenza: il catalogo li presenta come
-      software vivo, ma chi prova ad adottarli non trova manutentore.
+      Distribuzione dei repository per data dell'ultimo commit sul branch di
+      default. <b>{f['bucket_over_1y']}</b> repository non ricevono commit da
+      oltre un anno; di questi <b>{f['archived']}</b> risultano dichiarati
+      <code>archived</code> sul provider.
     </p>
     <div class="bars">{activity_bars}</div>
 
-    <h4>Processo di review largamente assente</h4>
+    <h4>Pull request e review</h4>
     <p>
-      Solo <b>{f['repos_with_pr']}</b> repository hanno mergeato almeno una PR
-      negli ultimi 90 giorni; di questi, <b>{f['repos_with_pr_no_review']}
-      ({f['repos_with_pr_no_review_pct']}%)</b> hanno coverage di review pari a 0%.
-      Tra i <b>{f['active_count']}</b> repository con commit recenti,
-      <b>{f['direct_push']} ({f['direct_push_pct_of_active']}%)</b> spingono
-      codice senza passare da pull request. La PR-with-review come pratica
-      consolidata non è la norma in questo catalogo.
+      <b>{f['repos_with_pr']}</b> repository hanno mergeato almeno una PR negli
+      ultimi 90 giorni; tra questi, <b>{f['repos_with_pr_no_review']}
+      ({f['repos_with_pr_no_review_pct']}%)</b> non registrano review sulle PR
+      mergeate. Tra i <b>{f['active_count']}</b> repository con commit recenti,
+      <b>{f['direct_push']} ({f['direct_push_pct_of_active']}%)</b> registrano
+      commit nella finestra senza passare da pull request.
     </p>
     <p>
-      Lead time mediano (tra repo con PR): <b>{f['overall_lead_median']} giorni</b>.
-      Review coverage mediana: <b>{f['overall_review_median']}%</b>.
-    </p>
-
-    <h4>Automazione: CI presente in 1 repo su 3</h4>
-    <p>
-      <b>{f['has_ci']} ({f['has_ci_pct']}%)</b> hanno CI configurato (workflow
-      GitHub Actions o equivalenti). <b>{f['has_dependabot']} ({f['has_dependabot_pct']}%)</b>
-      ricevono aggiornamenti automatici delle dipendenze (Dependabot/Renovate).
-      La maggioranza non ha test automatici né monitoraggio passivo delle CVE
-      nelle dipendenze.
+      Lead time mediano apertura→merge (tra i repo con PR):
+      <b>{f['overall_lead_median']} giorni</b>. Copertura review mediana:
+      <b>{f['overall_review_median']}%</b>.
     </p>
 
-    <h4>Rischio bus factor</h4>
+    <h4>Integrazione continua e aggiornamento dipendenze</h4>
     <p>
-      <b>{f['bus_risk']}</b> repository hanno oltre il 90% dei commit recenti
-      concentrati su un singolo autore. In caso di abbandono di quella persona,
-      il software non avrebbe continuità.
+      <b>{f['has_ci']} ({f['has_ci_pct']}%)</b> repository hanno una configurazione
+      CI (workflow in <code>.github/workflows</code> o file equivalenti nella root).
+      <b>{f['has_dependabot']} ({f['has_dependabot_pct']}%)</b> hanno ricevuto, nella
+      finestra, PR automatiche di aggiornamento delle dipendenze (Dependabot/Renovate).
     </p>
 
-    <h4>"Zombie del catalogo": <code>stable</code> ma silenti da oltre 2 anni</h4>
+    <h4>Concentrazione dei contributi</h4>
     <p>
-      <b>{f['zombies_count']} repository</b> sono dichiarati
-      <code>developmentStatus: stable</code> nel publiccode.yml ma non ricevono
-      commit da oltre due anni e non sono archiviati. Top 10:
+      In <b>{f['bus_risk']}</b> repository oltre il 90% dei commit recenti proviene
+      da un singolo autore.
+    </p>
+
+    <h4>Repository dichiarati «stable» senza commit da oltre 2 anni</h4>
+    <p>
+      <b>{f['zombies_count']} repository</b> hanno
+      <code>developmentStatus: stable</code> nel <code>publiccode.yml</code> ma non
+      ricevono commit da oltre due anni e non risultano archiviati. Primi 10 per
+      inattività:
     </p>
     {repo_list(f['zombies_top10'])}
 
-    <h4>I 10 più attivi (commit nel default branch, ultimi 90 giorni)</h4>
+    <h4>Repository più attivi (commit sul branch di default, ultimi 90 giorni)</h4>
     {repo_list(f['top_active'])}
 
     <h3>3. Linguaggi e licenze</h3>
@@ -364,8 +365,14 @@ def main() -> None:
     payload = json.dumps(enriched, ensure_ascii=False, default=str)
     findings = compute_findings(enriched)
     info_html = render_info_html(findings)
+    # data dell'ultimo scaricamento delle metriche (mtime di data/metrics.jsonl)
+    updated = datetime.fromtimestamp(METRICS.stat().st_mtime).strftime("%d/%m/%Y")
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    html = template.replace("__DATA__", payload).replace("__INFO__", info_html)
+    # il payload (blob JSON, grande) viene sostituito per ultimo
+    html = (template
+            .replace("__UPDATED__", updated)
+            .replace("__INFO__", info_html)
+            .replace("__DATA__", payload))
     OUT.write_text(html, encoding="utf-8")
     print(f"Generato {OUT} ({OUT.stat().st_size // 1024} KB) con {len(enriched)} repository")
 

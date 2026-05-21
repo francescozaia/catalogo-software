@@ -184,8 +184,8 @@
 <header class="site">
   <div class="it-slim">
     <div class="wrap">
-      <span class="brand"><span class="dot"></span> Developers Italia · Catalogo del software pubblico</span>
-      <span class="meta">Analisi salute repository · finestra metriche 90 giorni</span>
+      <span class="brand"><span class="dot"></span> Dati aggiornati al 21/05/2026</span>
+      <span class="meta">finestra metriche: 90 giorni</span>
     </div>
   </div>
   <div class="it-main">
@@ -304,68 +304,68 @@
   <div class="info-wrap">
     <h2>Metodologia & findings principali</h2>
     <p class="lead">
-      Estrazione completa del catalogo Developers Italia (518 software) e
-      raccolta delle metriche di salute per i 476 repository ospitati su GitHub.
-      Le metriche misurano <b>coinvolgimento, velocità e qualità del processo
-      di sviluppo</b>, deliberatamente escludendo segnali di facciata (stelle,
-      fork) che non riflettono salute manutentiva.
+      Catalogo di 518 software; metriche di salute calcolate per
+      504 repository pubblici (GitHub, GitLab, Bitbucket). Le metriche
+      descrivono coinvolgimento, velocità e qualità del processo di sviluppo —
+      ciclo delle pull request, copertura delle review, frequenza dei commit,
+      gestione delle issue, freschezza di codice e dipendenze — senza considerare
+      metriche di facciata come le stelle. Dati estratti dal catalogo pubblico di
+      Developers Italia.
     </p>
 
     <h3>1. Numeri chiave</h3>
-    <div class="kpis"><div class="kpi"><div class="kpi-v">504</div><div class="kpi-l">Repository GitHub analizzati</div><div class="kpi-n">+ 14 repo cancellati / non trovati</div></div><div class="kpi"><div class="kpi-v">246</div><div class="kpi-l">Inattivi &gt;1 anno</div><div class="kpi-n">48.8% del campione</div></div><div class="kpi"><div class="kpi-v">242</div><div class="kpi-l">Abbandonati di fatto (non archiviati)</div><div class="kpi-n">48.0% — solo 4 dichiarati</div></div><div class="kpi"><div class="kpi-v">333</div><div class="kpi-l">Mediana giorni dall&#x27;ultimo commit</div><div class="kpi-n">metà del catalogo sopra questa soglia</div></div><div class="kpi"><div class="kpi-v">174</div><div class="kpi-l">Repo con CI configurato</div><div class="kpi-n">34.5% del campione</div></div><div class="kpi"><div class="kpi-v">33</div><div class="kpi-l">Repo con PR Dependabot attivo</div><div class="kpi-n">6.5% del campione</div></div><div class="kpi"><div class="kpi-v">59</div><div class="kpi-l">Repo con almeno 1 PR mergeata in 90gg</div><div class="kpi-n">campione su cui si misurano lead time/review</div></div><div class="kpi"><div class="kpi-v">22</div><div class="kpi-l">…di cui senza alcuna review</div><div class="kpi-n">37.3% — merge senza verifica</div></div></div>
+    <div class="kpis"><div class="kpi"><div class="kpi-v">504</div><div class="kpi-l">Repository analizzati</div><div class="kpi-n">+ 14 non recuperabili (privati/cancellati)</div></div><div class="kpi"><div class="kpi-v">246</div><div class="kpi-l">Inattivi &gt;1 anno</div><div class="kpi-n">48.8% del campione</div></div><div class="kpi"><div class="kpi-v">242</div><div class="kpi-l">Inattivi &gt;1 anno e non archiviati</div><div class="kpi-n">48.0% del campione · 4 archiviati</div></div><div class="kpi"><div class="kpi-v">333</div><div class="kpi-l">Mediana giorni dall&#x27;ultimo commit</div><div class="kpi-n">metà dei repository ha un valore superiore</div></div><div class="kpi"><div class="kpi-v">174</div><div class="kpi-l">Repo con CI configurato</div><div class="kpi-n">34.5% del campione</div></div><div class="kpi"><div class="kpi-v">33</div><div class="kpi-l">Repo con PR Dependabot/Renovate</div><div class="kpi-n">6.5% del campione</div></div><div class="kpi"><div class="kpi-v">59</div><div class="kpi-l">Repo con ≥1 PR mergeata in 90gg</div><div class="kpi-n">campione per lead time e review</div></div><div class="kpi"><div class="kpi-v">22</div><div class="kpi-l">…di cui senza review registrata</div><div class="kpi-n">37.3% del sottoinsieme</div></div></div>
 
     <h3>2. Findings</h3>
 
-    <h4>Abbandono silente diffuso</h4>
+    <h4>Recency dell'attività</h4>
     <p>
-      <b>242 repository (48.0% del campione)</b>
-      non ricevono commit da oltre un anno ma non sono dichiarati
-      <code>archived</code> su GitHub. Solo <b>4</b> sono
-      esplicitamente archiviati. Conseguenza: il catalogo li presenta come
-      software vivo, ma chi prova ad adottarli non trova manutentore.
+      Distribuzione dei repository per data dell'ultimo commit sul branch di
+      default. <b>246</b> repository non ricevono commit da
+      oltre un anno; di questi <b>4</b> risultano dichiarati
+      <code>archived</code> sul provider.
     </p>
     <div class="bars"><div class="bar-row"><span class="bar-l">Push ≤ 30 giorni</span><span class="bar-bg"><i style="width:23.0%"></i></span><span class="bar-v">116 <em>(23.0%)</em></span></div><div class="bar-row"><span class="bar-l">Push ≤ 90 giorni</span><span class="bar-bg"><i style="width:32.9%"></i></span><span class="bar-v">166 <em>(32.9%)</em></span></div><div class="bar-row"><span class="bar-l">Inattivi &gt; 1 anno</span><span class="bar-bg"><i style="width:48.8%"></i></span><span class="bar-v">246 <em>(48.8%)</em></span></div><div class="bar-row"><span class="bar-l">Inattivi &gt; 2 anni</span><span class="bar-bg"><i style="width:40.7%"></i></span><span class="bar-v">205 <em>(40.7%)</em></span></div></div>
 
-    <h4>Processo di review largamente assente</h4>
+    <h4>Pull request e review</h4>
     <p>
-      Solo <b>59</b> repository hanno mergeato almeno una PR
-      negli ultimi 90 giorni; di questi, <b>22
-      (37.3%)</b> hanno coverage di review pari a 0%.
-      Tra i <b>135</b> repository con commit recenti,
-      <b>77 (57.0%)</b> spingono
-      codice senza passare da pull request. La PR-with-review come pratica
-      consolidata non è la norma in questo catalogo.
+      <b>59</b> repository hanno mergeato almeno una PR negli
+      ultimi 90 giorni; tra questi, <b>22
+      (37.3%)</b> non registrano review sulle PR
+      mergeate. Tra i <b>135</b> repository con commit recenti,
+      <b>77 (57.0%)</b> registrano
+      commit nella finestra senza passare da pull request.
     </p>
     <p>
-      Lead time mediano (tra repo con PR): <b>0.3 giorni</b>.
-      Review coverage mediana: <b>50.0%</b>.
-    </p>
-
-    <h4>Automazione: CI presente in 1 repo su 3</h4>
-    <p>
-      <b>174 (34.5%)</b> hanno CI configurato (workflow
-      GitHub Actions o equivalenti). <b>33 (6.5%)</b>
-      ricevono aggiornamenti automatici delle dipendenze (Dependabot/Renovate).
-      La maggioranza non ha test automatici né monitoraggio passivo delle CVE
-      nelle dipendenze.
+      Lead time mediano apertura→merge (tra i repo con PR):
+      <b>0.3 giorni</b>. Copertura review mediana:
+      <b>50.0%</b>.
     </p>
 
-    <h4>Rischio bus factor</h4>
+    <h4>Integrazione continua e aggiornamento dipendenze</h4>
     <p>
-      <b>66</b> repository hanno oltre il 90% dei commit recenti
-      concentrati su un singolo autore. In caso di abbandono di quella persona,
-      il software non avrebbe continuità.
+      <b>174 (34.5%)</b> repository hanno una configurazione
+      CI (workflow in <code>.github/workflows</code> o file equivalenti nella root).
+      <b>33 (6.5%)</b> hanno ricevuto, nella
+      finestra, PR automatiche di aggiornamento delle dipendenze (Dependabot/Renovate).
     </p>
 
-    <h4>"Zombie del catalogo": <code>stable</code> ma silenti da oltre 2 anni</h4>
+    <h4>Concentrazione dei contributi</h4>
     <p>
-      <b>173 repository</b> sono dichiarati
-      <code>developmentStatus: stable</code> nel publiccode.yml ma non ricevono
-      commit da oltre due anni e non sono archiviati. Top 10:
+      In <b>66</b> repository oltre il 90% dei commit recenti proviene
+      da un singolo autore.
+    </p>
+
+    <h4>Repository dichiarati «stable» senza commit da oltre 2 anni</h4>
+    <p>
+      <b>173 repository</b> hanno
+      <code>developmentStatus: stable</code> nel <code>publiccode.yml</code> ma non
+      ricevono commit da oltre due anni e non risultano archiviati. Primi 10 per
+      inattività:
     </p>
     <ol class='ranklist'><li><a href="https://github.com/IstitutoCentraleCatalogoUnicoBiblio/Chiedi-al-bibliotecario" target="_blank" rel="noopener">Chiedi al bibliotecario</a> <span class="ml">IstitutoCentraleCatalogoUnicoBiblio/Chiedi-al-bibliotecario</span> <b>2554</b></li><li><a href="https://github.com/consorzioit/io_messaging" target="_blank" rel="noopener">IO Messaging</a> <span class="ml">consorzioit/io_messaging</span> <b>2465</b></li><li><a href="https://bitbucket.org/Comune_Venezia/whistleblowing/" target="_blank" rel="noopener">Whistleblowing</a> <span class="ml">Comune_Venezia/whistleblowing</span> <b>2430</b></li><li><a href="https://github.com/CittaMetropolitanaVenezia/DeSK-KitRiuso-SIGEO" target="_blank" rel="noopener">SIGEO</a> <span class="ml">CittaMetropolitanaVenezia/DeSK-KitRiuso-SIGEO</span> <b>2387</b></li><li><a href="https://github.com/CittaMetropolitanaVenezia/DeSK-KitRiuso-APPDSS" target="_blank" rel="noopener">AppDSS</a> <span class="ml">CittaMetropolitanaVenezia/DeSK-KitRiuso-APPDSS</span> <b>2387</b></li><li><a href="https://github.com/CittaMetropolitanaVenezia/DeSK-KitRiuso-SICLA" target="_blank" rel="noopener">SICLA</a> <span class="ml">CittaMetropolitanaVenezia/DeSK-KitRiuso-SICLA</span> <b>2376</b></li><li><a href="https://bitbucket.org/Comune_Venezia/iris/src/master" target="_blank" rel="noopener">IRIS</a> <span class="ml">Comune_Venezia/iris</span> <b>2366</b></li><li><a href="https://github.com/WikiToLearn/WikiToLearn" target="_blank" rel="noopener">WikiToLearn</a> <span class="ml">WikiToLearn/WikiToLearn</span> <b>2354</b></li><li><a href="https://github.com/SITA-RegionePiemonte/CSIAtlanteWI.git" target="_blank" rel="noopener">CSI Atlante WI</a> <span class="ml">SITA-RegionePiemonte/CSIAtlanteWI</span> <b>2323</b></li><li><a href="https://github.com/SITA-RegionePiemonte/CSIAtlante.git" target="_blank" rel="noopener">CSI Atlante</a> <span class="ml">SITA-RegionePiemonte/CSIAtlante</span> <b>2316</b></li></ol>
 
-    <h4>I 10 più attivi (commit nel default branch, ultimi 90 giorni)</h4>
+    <h4>Repository più attivi (commit sul branch di default, ultimi 90 giorni)</h4>
     <ol class='ranklist'><li><a href="https://github.com/opf/openproject" target="_blank" rel="noopener">OpenProject</a> <span class="ml">opf/openproject</span> <b>4403</b></li><li><a href="https://github.com/qgis/QGIS" target="_blank" rel="noopener">QGIS</a> <span class="ml">qgis/QGIS</span> <b>1813</b></li><li><a href="https://github.com/nextcloud/server" target="_blank" rel="noopener">NextCloud Server</a> <span class="ml">nextcloud/server</span> <b>1657</b></li><li><a href="https://github.com/audacity/audacity" target="_blank" rel="noopener">Audacity</a> <span class="ml">audacity/audacity</span> <b>1263</b></li><li><a href="https://github.com/opengisch/QField" target="_blank" rel="noopener">QField</a> <span class="ml">opengisch/QField</span> <b>631</b></li><li><a href="https://github.com/pagopa/io-app" target="_blank" rel="noopener">IO</a> <span class="ml">pagopa/io-app</span> <b>271</b></li><li><a href="https://github.com/matomo-org/matomo" target="_blank" rel="noopener">Matomo</a> <span class="ml">matomo-org/matomo</span> <b>251</b></li><li><a href="https://github.com/Alfresco/alfresco-community-repo" target="_blank" rel="noopener">Alfresco</a> <span class="ml">Alfresco/alfresco-community-repo</span> <b>235</b></li><li><a href="https://github.com/pagopa/io-sign" target="_blank" rel="noopener">Firma con IO</a> <span class="ml">pagopa/io-sign</span> <b>196</b></li><li><a href="https://github.com/plausible/analytics" target="_blank" rel="noopener">Plausible</a> <span class="ml">plausible/analytics</span> <b>189</b></li></ol>
 
     <h3>3. Linguaggi e licenze</h3>
