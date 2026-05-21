@@ -1,5 +1,7 @@
 # Analisi catalogo del software open source
 
+_Disclaimer: quanto presente è un progetto personale basato su dati pubbgit lici_
+
 Pipeline per analizzare lo stato di salute del software open source e a riuso
 della Pubblica Amministrazione italiana, a partire dal
 [catalogo Developers Italia](https://developers.italia.it/it/search).
