@@ -63,6 +63,21 @@
   aside .toggle button { flex:1; min-width:62px; padding:6px 10px; background:#fff; color:var(--muted); border:1px solid var(--border); border-radius:50rem; cursor:pointer; font:inherit; font-size:12px; font-weight:600; transition:all .2s ease-in-out; }
   aside .toggle button:hover { border-color:var(--it-primary); color:var(--it-primary); background:var(--it-primary-lighter); }
   aside .toggle button.active { background:var(--it-primary); color:#fff; border-color:var(--it-primary); }
+  /* Multi-select (categoria, piattaforma, audience, codice IPA) */
+  .ms { position:relative; }
+  .ms-toggle { width:100%; text-align:left; padding:8px 10px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  .ms-toggle::after { content:"▾"; color:var(--muted); font-size:11px; }
+  .ms-toggle.has-sel { border-color:var(--it-primary); color:var(--it-primary); font-weight:600; }
+  .ms-panel { position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:25; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 8px 16px rgba(0,0,0,.15); padding:8px; }
+  .ms-panel[hidden] { display:none; }
+  .ms-search { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font:inherit; margin-bottom:6px; }
+  .ms-list { max-height:220px; overflow-y:auto; }
+  .ms-opt { display:flex; align-items:center; gap:7px; padding:4px; font-size:12px; cursor:pointer; border-radius:3px; }
+  .ms-opt:hover { background:var(--it-primary-lighter); }
+  .ms-opt input { accent-color:var(--it-primary); }
+  .ms-opt.hidden { display:none; }
+  .ms-clear { display:block; width:100%; margin-top:6px; padding:5px; background:transparent; border:1px dashed var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font:inherit; font-size:11px; }
+  .ms-clear:hover { color:var(--it-primary); border-color:var(--it-primary); }
   aside .range-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:6px; }
   aside .range-row input[type=number] { width:64px; padding:5px 6px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; }
   aside .weights { display:grid; gap:10px; }
@@ -93,20 +108,34 @@
 
   section.table-wrap { padding:0; overflow:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
   table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
-  th, td { padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
-  thead th { position:sticky; top:0; background:var(--it-dark); color:#fff; cursor:pointer; user-select:none; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; z-index:5; }
+  th, td { padding:9px 12px; text-align:left; white-space:nowrap; vertical-align:top; }
+  thead th { position:sticky; top:0; background:var(--it-dark); color:#fff; cursor:pointer; user-select:none; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.03em; z-index:5; border-bottom:1px solid var(--border); }
   thead th:hover { background:hsl(210,54%,27%); }
   thead th.sorted::after { content:"\00a0▼"; font-size:9px; }
   thead th.sorted.asc::after { content:"\00a0▲"; }
-  tbody tr { cursor:pointer; transition:background .15s; }
-  tbody tr:nth-child(even) { background:hsl(0,0%,98.5%); }
-  tbody tr:hover { background:var(--it-primary-lighter); }
-  tbody tr.row-err, tbody tr.row-err:nth-child(even) { background:hsl(350,90%,98.5%); }
-  tbody tr.row-err:hover { background:hsl(350,80%,96%); }
+  /* Ogni record = un <tbody class="rec"> con due righe: primaria (ra) + caratteristiche (rb) */
+  tbody.rec { cursor:pointer; border-bottom:1px solid var(--border); transition:background .15s; }
+  tbody.rec:nth-of-type(even) { background:hsl(0,0%,98.5%); }
+  tbody.rec:hover { background:var(--it-primary-lighter); }
+  tbody.rec.row-err, tbody.rec.row-err:nth-of-type(even) { background:hsl(350,90%,98.5%); }
+  tbody.rec.row-err:hover { background:hsl(350,80%,96%); }
+  tbody.rec .ra > td { padding-bottom:4px; }
+  tbody.rec .rb > td { padding-top:0; padding-bottom:10px; white-space:normal; }
   .repo-cell .err-reason { color:var(--bad); }
   tbody td.num { text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   tbody td.score { font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
-  .repo-cell > div:first-child { font-weight:600; }
+  .sw-name { font-weight:600; }
+  .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); margin-top:2px; }
+  .org-cell .org-name { margin-top:3px; font-size:12px; }
+  .org-cell .org-uri { margin-top:1px; font-size:11px; color:var(--muted); font-family:var(--font-mono); }
+  /* Riga caratteristiche */
+  .rb-chars { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline; }
+  .char { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:5px; }
+  .char-l { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; }
+  .char-v { font-family:var(--font-mono); font-size:12px; }
+  .chip { display:inline-block; padding:1px 8px; border-radius:50rem; font-size:11px; background:var(--it-primary-lighter); color:var(--it-primary-active); }
+  .rb-metrics { margin-top:6px; font-size:11px; color:var(--muted); }
+  .rb-metrics b { color:var(--text); font-family:var(--font-mono); }
   .score-bar { display:inline-block; width:34px; height:6px; background:var(--it-gray-100); border-radius:50rem; overflow:hidden; margin-left:6px; vertical-align:middle; }
   .score-bar > i { display:block; height:100%; }
   .badge { display:inline-block; padding:2px 8px; border-radius:50rem; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-family:var(--font-sans); }
@@ -126,7 +155,6 @@
   #drawer .drawer-err .raw { margin-top:6px; font-family:var(--font-mono); font-size:11px; color:var(--muted); word-break:break-word; }
   .pc-cat { display:inline-block; margin-left:6px; font-size:11px; color:var(--muted); }
   #drawer .pc-msg { margin-top:8px; padding:8px 10px; background:var(--it-gray-100); border-radius:4px; font-family:var(--font-mono); font-size:11px; line-height:1.5; color:var(--text); word-break:break-word; }
-  .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); }
 
   /* Drawer dettaglio */
   #drawer { position:fixed; top:0; right:0; height:100vh; width:520px; max-width:90vw; background:#fff; border-left:1px solid var(--border); box-shadow:-12px 0 32px rgba(0,0,0,.12); transform:translateX(100%); transition:transform .2s ease-in-out; overflow-y:auto; z-index:50; }
@@ -143,6 +171,20 @@
   #drawer .group dt { color:var(--muted); }
   #drawer .group dd { margin:0; text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   #drawer .desc { color:var(--it-dark); font-family:var(--font-serif); font-size:14px; font-style:italic; line-height:1.6; padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:16px; }
+  #drawer .group dd.brk { word-break:break-word; font-family:var(--font-mono); font-size:11px; }
+  #drawer .chars-d { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px; margin-top:8px; }
+  #drawer .long-desc { font-size:13px; line-height:1.55; white-space:pre-wrap; color:var(--text); }
+  #drawer .subgroup { margin-bottom:10px; }
+  #drawer .subgroup-h { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:4px; }
+  #drawer .person { padding:5px 0; border-bottom:1px dotted var(--border); }
+  #drawer .person:last-child { border-bottom:none; }
+  #drawer .person b { font-size:13px; }
+  #drawer .person-meta { font-size:12px; color:var(--muted); margin-top:1px; word-break:break-word; }
+  #drawer .cat-link { margin-top:10px; font-size:13px; font-weight:600; }
+  #drawer ul.usedby { margin:0; padding:0; list-style:none; max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:4px; }
+  #drawer ul.usedby li { padding:4px 10px; font-size:12px; border-bottom:1px solid var(--it-gray-100); }
+  #drawer ul.usedby li:last-child { border-bottom:none; }
+  #drawer .muted-note { margin-top:6px; font-size:11px; color:var(--muted); font-style:italic; }
   #backdrop { position:fixed; inset:0; background:rgba(33,40,51,.45); display:none; z-index:40; }
   #backdrop.show { display:block; }
 
@@ -300,6 +342,36 @@
     </h2>
     <label><select id="lic"><option value="">Tutte</option></select></label>
 
+    <h2>Tipo software
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Tipo software">i</button>
+      <span class="popover-box" role="tooltip">Filtra per <code>softwareType</code> dichiarato nel publiccode.yml (es. standalone/web, library, addon).</span></span>
+    </h2>
+    <label><select id="swtype"><option value="">Tutti</option></select></label>
+
+    <h2>Categoria
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Categoria">i</button>
+      <span class="popover-box" role="tooltip">Filtra per <code>categories</code>. Selezione multipla: mostra i software che appartengono ad almeno una delle categorie scelte.</span></span>
+    </h2>
+    <div class="ms" id="ms-cat"></div>
+
+    <h2>Piattaforma
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Piattaforma">i</button>
+      <span class="popover-box" role="tooltip">Filtra per <code>platforms</code>. Selezione multipla (almeno una tra quelle scelte).</span></span>
+    </h2>
+    <div class="ms" id="ms-plat"></div>
+
+    <h2>Audience
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Audience">i</button>
+      <span class="popover-box" role="tooltip">Filtra per <code>intendedAudience.scope</code>. Selezione multipla (almeno una tra quelle scelte).</span></span>
+    </h2>
+    <div class="ms" id="ms-aud"></div>
+
+    <h2>Codice IPA
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Codice IPA">i</button>
+      <span class="popover-box" role="tooltip">Filtra per codice IPA dell'organizzazione (solo software a riuso). Selezione multipla.</span></span>
+    </h2>
+    <div class="ms" id="ms-ipa"></div>
+
     <h2>Stato publiccode.yml
       <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Stato publiccode.yml">i</button>
       <span class="popover-box" role="tooltip">Esito dell'ultima validazione del file <code>publiccode.yml</code> secondo il crawler di Developers Italia. <b>Valido</b>: nessun problema. <b>Avviso</b>: rilievi minori (es. versione del formato non più recente). <b>Errore</b>: la validazione non passa. <b>Sconosciuto</b>: esito non disponibile.</span></span>
@@ -356,20 +428,14 @@
         <tr>
           <th data-k="score" data-num="1" class="sorted">Score</th>
           <th data-k="catalog_name">Software</th>
-          <th data-k="organisation_label">Ente / Owner</th>
-          <th data-k="primary_language">Lang</th>
-          <th data-k="license">Licenza</th>
+          <th data-k="organisation_label">Organizzazione</th>
+          <th data-k="software_type">Tipo SW</th>
+          <th data-k="maintenance_type">Manutenzione</th>
+          <th data-k="used_by_count" data-num="1">Riusi</th>
           <th data-k="days_since_last_commit" data-num="1">Ultimo commit</th>
-          <th data-k="commits_in_window" data-num="1">Commit 90gg</th>
-          <th data-k="pr_merged_in_window" data-num="1">PR merged</th>
-          <th data-k="pr_median_lead_time_days" data-num="1">Lead time</th>
-          <th data-k="pr_review_coverage_pct" data-num="1">Review %</th>
-          <th data-k="issues_open_now" data-num="1">Issue aperte</th>
-          <th data-k="has_ci" data-num="1">CI</th>
-          <th data-k="publiccode_severity">Stato publiccode.yml</th>
+          <th data-k="publiccode_severity">publiccode.yml</th>
         </tr>
       </thead>
-      <tbody id="tbody"></tbody>
     </table>
     <div id="empty" class="empty" hidden>Nessun risultato.</div>
   </section>
@@ -512,22 +578,82 @@ const state = {
   quick: new Set(),
   lang: "", lic: "",
   maxStale: "", minCommits: "",
-  pcsev: "", pccat: "",
+  pcsev: "", pccat: "", swtype: "",
+  cat: new Set(), plat: new Set(), aud: new Set(), ipa: new Set(),
   sort: { k: "score", asc: false },
   weights: { f: 25, v: 25, q: 25, m: 25 },
 };
 
 // Precompute organisation labels
 for (const r of DATA) {
-  r.organisation_label = r.codice_ipa ? `IPA:${r.codice_ipa}` : ownerOf(r.url || "");
+  r.organisation_label = r.organisation_name || (r.codice_ipa ? `IPA:${r.codice_ipa}` : ownerOf(r.url || ""));
+}
+
+// === Multi-select riutilizzabile (dropdown con ricerca + checkbox) ===
+function closeAllMs() {
+  document.querySelectorAll(".ms-panel").forEach(p => {
+    p.hidden = true;
+    const t = p.parentElement.querySelector(".ms-toggle");
+    if (t) t.setAttribute("aria-expanded", "false");
+  });
+}
+function initMultiSelect(containerId, values, sel, allLabel) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = `
+    <button type="button" class="ms-toggle" aria-expanded="false">${allLabel}</button>
+    <div class="ms-panel" hidden>
+      <input type="text" class="ms-search" placeholder="filtra…">
+      <div class="ms-list">${values.map(v => `<label class="ms-opt"><input type="checkbox" value="${escapeHtml(v)}"><span>${escapeHtml(v)}</span></label>`).join("")}</div>
+      <button type="button" class="ms-clear">deseleziona tutto</button>
+    </div>`;
+  const toggle = c.querySelector(".ms-toggle");
+  const panel = c.querySelector(".ms-panel");
+  const search = c.querySelector(".ms-search");
+  const updateLabel = () => {
+    toggle.textContent = sel.size ? `${sel.size} selezionat${sel.size === 1 ? 'a' : 'e'}` : allLabel;
+    toggle.classList.toggle("has-sel", sel.size > 0);
+  };
+  toggle.addEventListener("click", e => {
+    e.stopPropagation();
+    const willOpen = panel.hidden;
+    closeAllMs(); closePopovers();
+    if (willOpen) { panel.hidden = false; toggle.setAttribute("aria-expanded", "true"); search.focus(); }
+  });
+  panel.addEventListener("click", e => e.stopPropagation());
+  search.addEventListener("input", () => {
+    const q = search.value.toLowerCase();
+    panel.querySelectorAll(".ms-opt").forEach(o => o.classList.toggle("hidden", q && !o.textContent.toLowerCase().includes(q)));
+  });
+  panel.querySelectorAll(".ms-opt input").forEach(cb => cb.addEventListener("change", () => {
+    if (cb.checked) sel.add(cb.value); else sel.delete(cb.value);
+    updateLabel(); render();
+  }));
+  c.querySelector(".ms-clear").addEventListener("click", () => {
+    sel.clear();
+    panel.querySelectorAll(".ms-opt input").forEach(cb => cb.checked = false);
+    updateLabel(); render();
+  });
+  c._reset = () => {
+    sel.clear();
+    panel.querySelectorAll(".ms-opt input").forEach(cb => cb.checked = false);
+    panel.querySelectorAll(".ms-opt").forEach(o => o.classList.remove("hidden"));
+    search.value = ""; updateLabel();
+  };
+  updateLabel();
 }
 
 // Build options
 const langs = new Set(), licenses = new Set(), pcCats = new Set();
+const cats = new Set(), plats = new Set(), auds = new Set(), ipas = new Set(), swtypes = new Set();
 for (const r of DATA) {
   if (r.primary_language) langs.add(r.primary_language);
   if (r.license) licenses.add(r.license);
   if (r.publiccode_category) pcCats.add(r.publiccode_category);
+  (r.categories || []).forEach(x => cats.add(x));
+  (r.platforms || []).forEach(x => plats.add(x));
+  (r.audience_scope || []).forEach(x => auds.add(x));
+  if (r.codice_ipa) ipas.add(r.codice_ipa);
+  if (r.software_type) swtypes.add(r.software_type);
 }
 const langSel = document.getElementById("lang");
 [...langs].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; langSel.appendChild(o); });
@@ -535,12 +661,18 @@ const licSel = document.getElementById("lic");
 [...licenses].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; licSel.appendChild(o); });
 const pcCatSel = document.getElementById("pccat");
 [...pcCats].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; pcCatSel.appendChild(o); });
+const swSel = document.getElementById("swtype");
+[...swtypes].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; swSel.appendChild(o); });
+initMultiSelect("ms-cat", [...cats].sort(), state.cat, "Tutte");
+initMultiSelect("ms-plat", [...plats].sort(), state.plat, "Tutte");
+initMultiSelect("ms-aud", [...auds].sort(), state.aud, "Tutte");
+initMultiSelect("ms-ipa", [...ipas].sort(), state.ipa, "Tutti");
 
 // === Filter & sort ===
 function filterRow(r) {
   if (state.q) {
     const q = state.q.toLowerCase();
-    const hay = (r.catalog_name + " " + (r.name_with_owner || "") + " " + (r.organisation_label || "") + " " + (r.codice_ipa || "")).toLowerCase();
+    const hay = (r.catalog_name + " " + (r.name_with_owner || "") + " " + (r.organisation_label || "") + " " + (r.organisation_name || "") + " " + (r.codice_ipa || "")).toLowerCase();
     if (!hay.includes(q)) return false;
   }
   if (state.kind === "riuso" && !r.is_riuso) return false;
@@ -557,6 +689,11 @@ function filterRow(r) {
   if (state.minCommits !== "" && !((num(r.commits_in_window) ?? 0) >= +state.minCommits)) return false;
   if (state.pcsev && (r.publiccode_severity || "unknown") !== state.pcsev) return false;
   if (state.pccat && (r.publiccode_category || "") !== state.pccat) return false;
+  if (state.swtype && r.software_type !== state.swtype) return false;
+  if (state.cat.size && !(r.categories || []).some(c => state.cat.has(c))) return false;
+  if (state.plat.size && !(r.platforms || []).some(p => state.plat.has(p))) return false;
+  if (state.aud.size && !(r.audience_scope || []).some(a => state.aud.has(a))) return false;
+  if (state.ipa.size && !(r.codice_ipa && state.ipa.has(r.codice_ipa))) return false;
   // i repo non recuperabili (errore metriche) restano visibili: hanno comunque
   // dati di catalogo e stato publiccode; i filtri basati sulle metriche li
   // escludono naturalmente perché quei valori sono assenti.
@@ -574,7 +711,7 @@ function render() {
   const k = state.sort.k, asc = state.sort.asc;
   rows.sort((a, b) => {
     let av = a[k], bv = b[k];
-    if (k === "catalog_name" || k === "organisation_label" || k === "primary_language" || k === "license" || k === "publiccode_severity") {
+    if (k === "catalog_name" || k === "organisation_label" || k === "software_type" || k === "maintenance_type" || k === "publiccode_severity") {
       av = (av || "").toString().toLowerCase(); bv = (bv || "").toString().toLowerCase();
       return asc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
@@ -585,8 +722,9 @@ function render() {
     return asc ? av - bv : bv - av;
   });
 
-  const tbody = document.getElementById("tbody");
-  tbody.innerHTML = rows.map(r => rowHtml(r)).join("");
+  const tbl = document.getElementById("tbl");
+  tbl.querySelectorAll("tbody.rec").forEach(e => e.remove());
+  tbl.insertAdjacentHTML("beforeend", rows.map(r => rowHtml(r)).join(""));
   document.getElementById("empty").hidden = rows.length > 0;
 
   // top stats
@@ -613,6 +751,9 @@ function render() {
   });
 }
 
+function chipsHtml(arr) { return (arr || []).map(x => `<span class="chip">${escapeHtml(x)}</span>`).join(""); }
+function charBlock(label, arr) { if (!arr || !arr.length) return ""; return `<span class="char"><span class="char-l">${label}</span> ${chipsHtml(arr)}</span>`; }
+
 function rowHtml(r) {
   const score = r.score ?? 0;
   const sc = color(score);
@@ -621,32 +762,75 @@ function rowHtml(r) {
     : `<td class="num score" style="color:${sc}">${score}<span class="score-bar"><i style="width:${score}%;background:${sc}"></i></span></td>`;
   const provBadge = (r.provider && r.provider !== 'github') ? `<span class="badge prov">${r.provider==='gitlab'?'GL':'BB'}</span>` : '';
   const errBadge = r.error ? ` <span class="badge err">non recuperabile</span>` : '';
-  const orgLine = r.error
+  const catLink = r.catalog_id ? `<a href="https://developers.italia.it/it/software/${escapeHtml(r.catalog_id)}" target="_blank" rel="noopener">scheda catalogo ↗</a> · ` : '';
+  const repoLink = r.error
     ? `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml((r.url || '').replace(/^https?:\/\//, ''))}</a> · <span class="err-reason">${escapeHtml(errReason(r.error))}</span>`
     : `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || (r.url || "").replace('https://github.com/',''))}</a>`;
-  return `<tr data-url="${escapeHtml(r.url)}"${r.error ? ' class="row-err"' : ''}>
-    ${scoreCell}
-    <td class="repo-cell">
-      <div>${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${provBadge}${errBadge}</div>
-      <div class="org">${orgLine}</div>
-    </td>
-    <td>${r.is_riuso ? `<span class="badge riuso">${r.codice_ipa ? 'IPA:' + escapeHtml(r.codice_ipa) : 'Riuso'}</span>` : `<span class="badge os">${escapeHtml(ownerOf(r.url || ''))}</span>`}</td>
-    <td>${escapeHtml(r.primary_language || "—")}</td>
-    <td>${escapeHtml(r.license || "—")}</td>
-    <td class="num">${fmtDays(num(r.days_since_last_commit))}${r.archived ? ' <span class="badge arch">archiv.</span>' : ''}</td>
-    <td class="num">${fmtNum(r.commits_in_window)}</td>
-    <td class="num">${fmtNum(r.pr_merged_in_window)}</td>
-    <td class="num">${fmtNum(r.pr_median_lead_time_days)}</td>
-    <td class="num">${fmtPct(r.pr_review_coverage_pct)}</td>
-    <td class="num">${fmtNum(r.issues_open_now)}</td>
-    <td class="num">${r.has_ci ? '✓' : '—'}</td>
-    <td>${pcBadge(r.publiccode_severity)}${(r.publiccode_category) ? ` <span class="pc-cat">${escapeHtml(r.publiccode_category)}</span>` : ''}</td>
-  </tr>`;
+
+  // colonna Organizzazione
+  let orgCell;
+  if (r.is_riuso) {
+    orgCell = `<span class="badge riuso">${r.codice_ipa ? 'IPA:' + escapeHtml(r.codice_ipa) : 'Riuso'}</span>`
+      + (r.organisation_name ? `<div class="org-name">${escapeHtml(r.organisation_name)}</div>` : '')
+      + (r.organisation_uri ? `<div class="org-uri">${escapeHtml(r.organisation_uri)}</div>` : '');
+  } else {
+    orgCell = `<span class="badge os">open</span><div class="org-name">${escapeHtml(r.organisation_name || ownerOf(r.url || ''))}</div>`;
+  }
+
+  const metricsLine = r.error ? '' :
+    `<div class="rb-metrics">repo · commit 90gg <b>${fmtNum(r.commits_in_window)}</b> · PR merged <b>${fmtNum(r.pr_merged_in_window)}</b> · lead time <b>${fmtNum(r.pr_median_lead_time_days)}</b> · review <b>${fmtPct(r.pr_review_coverage_pct)}</b> · issue aperte <b>${fmtNum(r.issues_open_now)}</b> · CI <b>${r.has_ci ? 'sì' : 'no'}</b></div>`;
+
+  return `<tbody class="rec${r.error ? ' row-err' : ''}" data-url="${escapeHtml(r.url)}">
+    <tr class="ra">
+      ${scoreCell}
+      <td class="repo-cell">
+        <div class="sw-name">${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${provBadge}${errBadge}</div>
+        <div class="org">${catLink}${repoLink}</div>
+      </td>
+      <td class="org-cell">${orgCell}</td>
+      <td>${escapeHtml(r.software_type || "—")}</td>
+      <td>${escapeHtml(r.maintenance_type || "—")}</td>
+      <td class="num">${r.used_by_count ? fmtNum(r.used_by_count) : '—'}</td>
+      <td class="num">${fmtDays(num(r.days_since_last_commit))}${r.archived ? ' <span class="badge arch">archiv.</span>' : ''}</td>
+      <td>${pcBadge(r.publiccode_severity)}${(r.publiccode_category) ? ` <span class="pc-cat">${escapeHtml(r.publiccode_category)}</span>` : ''}</td>
+    </tr>
+    <tr class="rb"><td colspan="8">
+      <div class="rb-chars">
+        ${charBlock('Categorie', r.categories)}
+        ${charBlock('Piattaforme', r.platforms)}
+        ${charBlock('Audience', r.audience_scope)}
+        <span class="char"><span class="char-l">Versione publiccode</span> <span class="char-v">${escapeHtml(r.publiccode_version || '—')}</span></span>
+      </div>
+      ${metricsLine}
+    </td></tr>
+  </tbody>`;
 }
 
 function escapeHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 // === Drawer ===
+function personLine(p) {
+  const bits = [];
+  if (p.email) bits.push(`<a href="mailto:${escapeHtml(p.email)}">${escapeHtml(p.email)}</a>`);
+  if (p.phone) bits.push(escapeHtml(p.phone));
+  if (p.website) bits.push(`<a href="${escapeHtml(p.website)}" target="_blank" rel="noopener">${escapeHtml(p.website)}</a>`);
+  if (p.affiliation) bits.push(escapeHtml(p.affiliation));
+  if (p.until) bits.push('contratto fino al ' + escapeHtml(p.until));
+  return `<div class="person"><b>${escapeHtml(p.name || '—')}</b>${bits.length ? `<div class="person-meta">${bits.join(' · ')}</div>` : ''}</div>`;
+}
+function peopleBlock(title, list) {
+  if (!list || !list.length) return '';
+  return `<div class="subgroup"><div class="subgroup-h">${title}</div>${list.map(personLine).join('')}</div>`;
+}
+function usedByBlock(r) {
+  if (!r.used_by_count) return '';
+  const list = r.used_by || [];
+  const items = list.map(x => `<li>${escapeHtml(x)}</li>`).join('');
+  const trunc = r.used_by_count > list.length ? `<div class="muted-note">elenco troncato: mostrati ${list.length} di ${r.used_by_count}</div>` : '';
+  return `<div class="group"><h4>Riutilizzato da (${r.used_by_count})</h4><ul class="usedby">${items}</ul>${trunc}</div>`;
+}
+function charBlockD(label, arr) { return charBlock(label, arr) ? `<div class="chars-d">${charBlock(label, arr)}</div>` : ''; }
+
 function openDrawer(url) {
   const r = DATA.find(x => x.url === url);
   if (!r) return;
@@ -688,6 +872,24 @@ function openDrawer(url) {
   const body = document.getElementById("d-body");
   body.innerHTML = `
     ${r.short_description ? `<div class="desc">${escapeHtml(r.short_description)}</div>` : ''}
+    <div class="group">
+      <h4>Caratteristiche</h4>
+      <dl>
+        <dt>Tipo software</dt><dd>${escapeHtml(r.software_type || '—')}</dd>
+        <dt>Tipo manutenzione</dt><dd>${escapeHtml(r.maintenance_type || '—')}</dd>
+        <dt>Versione publiccode</dt><dd>${escapeHtml(r.publiccode_version || '—')}</dd>
+        <dt>Organizzazione</dt><dd>${r.is_riuso ? (r.codice_ipa ? 'A riuso · IPA ' + escapeHtml(r.codice_ipa) : 'A riuso') : 'Open source'}</dd>
+        ${r.organisation_name ? `<dt>Nome organizzazione</dt><dd>${escapeHtml(r.organisation_name)}</dd>` : ''}
+        ${r.organisation_uri ? `<dt>URI organizzazione</dt><dd class="brk">${escapeHtml(r.organisation_uri)}</dd>` : ''}
+      </dl>
+      ${charBlockD('Categorie', r.categories)}
+      ${charBlockD('Piattaforme', r.platforms)}
+      ${charBlockD('Audience', r.audience_scope)}
+      ${r.catalog_id ? `<div class="cat-link"><a href="https://developers.italia.it/it/software/${escapeHtml(r.catalog_id)}" target="_blank" rel="noopener">Apri scheda nel catalogo ↗</a></div>` : ''}
+    </div>
+    ${r.long_description ? `<div class="group"><h4>Descrizione</h4><div class="long-desc">${escapeHtml(r.long_description)}</div></div>` : ''}
+    ${(r.contractors && r.contractors.length) || (r.contacts && r.contacts.length) ? `<div class="group"><h4>Manutentori</h4>${peopleBlock('Contraenti', r.contractors)}${peopleBlock('Contatti', r.contacts)}</div>` : ''}
+    ${usedByBlock(r)}
     <div class="group">
       <h4>Score composito (peso applicato)</h4>
       <dl>
@@ -742,7 +944,7 @@ function openDrawer(url) {
       </dl>
     </div>
     <div class="group">
-      <h4>Manutenzione</h4>
+      <h4>Dipendenze e CI</h4>
       <dl>
         <dt>PR Dependabot (90gg)</dt><dd>${fmtNum(r.dependabot_pr_in_window)}</dd>
         <dt>File dipendenze</dt><dd>${escapeHtml(r.dependency_files || '—')}</dd>
@@ -784,6 +986,7 @@ document.querySelectorAll("#quick button").forEach(b => b.addEventListener("clic
 }));
 document.getElementById("lang").addEventListener("change", e => { state.lang = e.target.value; render(); });
 document.getElementById("lic").addEventListener("change", e => { state.lic = e.target.value; render(); });
+document.getElementById("swtype").addEventListener("change", e => { state.swtype = e.target.value; render(); });
 document.getElementById("pcsev").addEventListener("change", e => { state.pcsev = e.target.value; render(); });
 document.getElementById("pccat").addEventListener("change", e => { state.pccat = e.target.value; render(); });
 document.getElementById("maxStale").addEventListener("input", e => { state.maxStale = e.target.value; render(); });
@@ -806,10 +1009,10 @@ document.querySelectorAll("thead th").forEach(th => th.addEventListener("click",
   render();
 }));
 
-document.getElementById("tbody").addEventListener("click", e => {
-  const tr = e.target.closest("tr"); if (!tr) return;
+document.getElementById("tbl").addEventListener("click", e => {
   if (e.target.tagName === "A") return;
-  openDrawer(tr.dataset.url);
+  const rec = e.target.closest("tbody.rec"); if (!rec) return;
+  openDrawer(rec.dataset.url);
 });
 document.getElementById("d-close").addEventListener("click", closeDrawer);
 document.getElementById("backdrop").addEventListener("click", closeDrawer);
@@ -831,18 +1034,21 @@ document.querySelectorAll(".info-i").forEach(btn => btn.addEventListener("click"
 document.querySelectorAll(".popover-box").forEach(p => p.addEventListener("click", e => e.stopPropagation()));
 // click fuori o Escape: chiudi
 document.addEventListener("click", closePopovers);
-document.addEventListener("keydown", e => { if (e.key === "Escape") closePopovers(); });
+document.addEventListener("click", closeAllMs);
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closePopovers(); closeAllMs(); } });
 
 function resetFilters() {
   state.q = ""; state.kind = "all"; state.active = "any"; state.quick.clear();
   state.lang = ""; state.lic = ""; state.maxStale = ""; state.minCommits = "";
-  state.pcsev = ""; state.pccat = "";
+  state.pcsev = ""; state.pccat = ""; state.swtype = "";
   state.weights = { f: 25, v: 25, q: 25, m: 25 };
   document.getElementById("q").value = "";
   document.getElementById("lang").value = "";
   document.getElementById("lic").value = "";
+  document.getElementById("swtype").value = "";
   document.getElementById("pcsev").value = "";
   document.getElementById("pccat").value = "";
+  ["ms-cat","ms-plat","ms-aud","ms-ipa"].forEach(id => { const c = document.getElementById(id); if (c && c._reset) c._reset(); });
   document.getElementById("maxStale").value = "";
   document.getElementById("minCommits").value = "";
   ["wF","wV","wQ","wM"].forEach((id,i)=>{ document.getElementById(id).value = 25; document.getElementById(id+"-val").textContent = "25"; });
@@ -855,7 +1061,7 @@ document.getElementById("resetTop").addEventListener("click", resetFilters);
 
 document.getElementById("exportCsv").addEventListener("click", () => {
   const rows = DATA.filter(filterRow);
-  const cols = ["score","catalog_name","name_with_owner","url","organisation_label","is_riuso","codice_ipa","primary_language","license","days_since_last_commit","commits_in_window","commit_authors_in_window","bus_factor_top1_pct","pr_total_in_window","pr_merged_in_window","pr_median_lead_time_days","pr_p90_lead_time_days","pr_review_coverage_pct","issues_open_now","oldest_open_issue_days","issue_close_ratio_pct","dependabot_pr_in_window","dependency_files","has_ci","releases_total","latest_release_date","publiccode_severity","publiccode_category","publiccode_message","archived","fork"];
+  const cols = ["score","catalog_id","catalog_name","name_with_owner","url","is_riuso","codice_ipa","organisation_name","organisation_uri","software_type","maintenance_type","publiccode_version","categories","platforms","audience_scope","used_by_count","primary_language","license","days_since_last_commit","commits_in_window","commit_authors_in_window","bus_factor_top1_pct","pr_total_in_window","pr_merged_in_window","pr_median_lead_time_days","pr_p90_lead_time_days","pr_review_coverage_pct","issues_open_now","oldest_open_issue_days","issue_close_ratio_pct","dependabot_pr_in_window","dependency_files","has_ci","releases_total","latest_release_date","publiccode_severity","publiccode_category","publiccode_message","archived","fork"];
   const esc = v => { if (v === null || v === undefined) return ""; const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });

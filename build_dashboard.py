@@ -147,6 +147,29 @@ def classify_reuse(pc: dict) -> tuple[bool, str, str]:
     return is_riuso, (org_uri or ""), codice_ipa
 
 
+def pick_localised(desc: dict, key: str) -> str:
+    """Testo localizzato dalla description publiccode (it-IT preferito)."""
+    if not isinstance(desc, dict):
+        return ""
+    for lang in ("it-IT", "it", "en", "en-US"):
+        blk = desc.get(lang)
+        if isinstance(blk, dict) and blk.get(key):
+            return str(blk[key])
+    for blk in desc.values():
+        if isinstance(blk, dict) and blk.get(key):
+            return str(blk[key])
+    return ""
+
+
+def _people(lst, keys: list[str]) -> list[dict]:
+    """Normalizza una lista di persone/contraenti tenendo solo i campi presenti."""
+    out = []
+    for x in (lst if isinstance(lst, list) else []):
+        if isinstance(x, dict):
+            out.append({k: x.get(k) for k in keys if x.get(k)})
+    return out
+
+
 def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, dict]) -> list[dict]:
     out = []
     for m in metrics:
@@ -154,17 +177,32 @@ def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, 
         cat = catalog.get(url, {})
         pc = cat.get("publiccode") or {}
         is_riuso, org_uri, codice_ipa = classify_reuse(pc)
+        org = pc.get("organisation") if isinstance(pc.get("organisation"), dict) else {}
+        maint = pc.get("maintenance") if isinstance(pc.get("maintenance"), dict) else {}
+        ia = pc.get("intendedAudience") if isinstance(pc.get("intendedAudience"), dict) else {}
+        used_by = pc.get("usedBy") if isinstance(pc.get("usedBy"), list) else []
+        desc = pc.get("description") or {}
         m2 = dict(m)
+        m2["catalog_id"] = cat.get("id") or ""
         m2["catalog_name"] = pc.get("name", "")
         m2["development_status"] = pc.get("developmentStatus", "")
         m2["release_date"] = pc.get("releaseDate", "")
         m2["organisation_uri"] = org_uri or ""
+        m2["organisation_name"] = org.get("name") or ""
         m2["is_riuso"] = is_riuso
         m2["codice_ipa"] = codice_ipa
         m2["categories"] = pc.get("categories") or []
-        desc = pc.get("description") or {}
-        it = desc.get("it-IT") if isinstance(desc, dict) else None
-        m2["short_description"] = (it or {}).get("shortDescription", "") if isinstance(it, dict) else ""
+        m2["platforms"] = pc.get("platforms") or []
+        m2["software_type"] = pc.get("softwareType") or ""
+        m2["publiccode_version"] = str(pc.get("publiccodeYmlVersion") or "")
+        m2["audience_scope"] = ia.get("scope") or []
+        m2["maintenance_type"] = maint.get("type") or ""
+        m2["contractors"] = _people(maint.get("contractors"), ["name", "until", "website", "email"])
+        m2["contacts"] = _people(maint.get("contacts"), ["name", "email", "phone", "affiliation"])
+        m2["used_by_count"] = len(used_by)
+        m2["used_by"] = [str(x) for x in used_by[:1000]]  # cap per contenere il payload
+        m2["short_description"] = pick_localised(desc, "shortDescription")
+        m2["long_description"] = pick_localised(desc, "longDescription")
 
         # --- Stato di validazione publiccode.yml (da data/publiccode.jsonl) ---
         pcrec = publiccode.get(cat.get("id")) if cat.get("id") else None
