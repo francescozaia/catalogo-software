@@ -53,7 +53,7 @@
   main { display:grid; grid-template-columns:288px 1fr; }
   main[hidden] { display:none; }
   aside { background:#fff; border-right:1px solid var(--border); padding:16px; overflow-y:auto; height:calc(100vh - var(--header-h)); }
-  aside h2 { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--it-primary); font-weight:700; margin:18px 0 8px; }
+  aside h2 { position:relative; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--it-primary); font-weight:700; margin:18px 0 8px; }
   aside h2:first-child { margin-top:0; }
   aside label { display:block; font-size:13px; margin-bottom:8px; }
   aside input[type=text], aside select { width:100%; padding:8px 10px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; }
@@ -70,6 +70,26 @@
   aside .weights .w span { font-family:var(--font-mono); color:var(--it-primary); }
   aside .reset { width:100%; margin-top:14px; padding:9px; background:#fff; color:var(--it-primary); border:1px solid var(--it-primary); border-radius:4px; cursor:pointer; font:inherit; font-weight:600; text-transform:uppercase; font-size:12px; letter-spacing:.02em; transition:all .2s ease-in-out; }
   aside .reset:hover { background:var(--it-primary); color:#fff; }
+
+  /* Testo di aiuto sotto la ricerca */
+  aside .field-hint { margin:-2px 0 0; font-size:11px; line-height:1.4; color:var(--muted); }
+
+  /* "i" cliccabile + popover informativo (stile Bootstrap Italia) */
+  .help { display:inline; }
+  .info-i { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:5px; padding:0; border:1px solid var(--it-primary); border-radius:50%; background:#fff; color:var(--it-primary); font-family:var(--font-serif); font-style:italic; font-weight:700; font-size:10px; line-height:1; cursor:pointer; vertical-align:middle; text-transform:none; }
+  .info-i:hover, .info-i[aria-expanded="true"] { background:var(--it-primary); color:#fff; }
+  .popover-box { display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 8px 16px rgba(0,0,0,.15); padding:10px 12px; font-family:var(--font-sans); font-weight:400; font-size:12px; line-height:1.45; letter-spacing:normal; text-transform:none; color:var(--text); }
+  .popover-box.open { display:block; }
+  .popover-box b { color:var(--it-primary); }
+  .popover-box ul { margin:6px 0 0; padding-left:16px; }
+  .popover-box li { margin:3px 0; }
+
+  /* Intestazione sidebar filtri con "Azzera" in alto */
+  .filters-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 0 6px; }
+  .filters-head .title { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; }
+  .reset-link { background:transparent; border:none; color:var(--it-primary); font-family:var(--font-sans); font-weight:600; font-size:12px; cursor:pointer; padding:2px 4px; border-radius:4px; }
+  .reset-link:hover { text-decoration:underline; }
+  aside .filters-head + h2 { margin-top:0; }
 
   section.table-wrap { padding:0; overflow:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
   table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
@@ -214,32 +234,39 @@
 
 <main id="view-catalogo" class="filters-open">
   <aside>
+    <div class="filters-head">
+      <span class="title">Filtri</span>
+      <button type="button" id="resetTop" class="reset-link">Azzera</button>
+    </div>
+
     <h2>Ricerca</h2>
     <label><input id="q" type="text" placeholder="nome, ente, repo…"></label>
+    <p class="field-hint">Cerca nei campi: nome del software, repository (owner/nome), ente o owner e codice IPA.</p>
 
-    <h2>Tipo</h2>
+    <h2>Tipo
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Tipo">i</button>
+      <span class="popover-box" role="tooltip"><b>A riuso</b>: software rilasciato da una PA (identificato da un codice IPA). <b>Open source</b>: tutti gli altri.</span></span>
+    </h2>
     <div class="toggle" id="kind">
       <button data-v="all" class="active">Tutti</button>
       <button data-v="riuso">A riuso</button>
       <button data-v="os">Open source</button>
     </div>
 
-    <h2>Provider</h2>
-    <div class="toggle" id="provider">
-      <button data-v="all" class="active">Tutti</button>
-      <button data-v="github">GitHub</button>
-      <button data-v="gitlab">GitLab</button>
-      <button data-v="bitbucket">Bitbucket</button>
-    </div>
-
-    <h2>Stato repo</h2>
+    <h2>Stato repo
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Stato repo">i</button>
+      <span class="popover-box" role="tooltip"><b>Attivi</b>: repository non archiviati. <b>Archiviati</b>: repository contrassegnati come archiviati sul provider di hosting.</span></span>
+    </h2>
     <div class="toggle" id="active">
       <button data-v="any" class="active">Tutti</button>
       <button data-v="active">Attivi</button>
       <button data-v="archived">Archiviati</button>
     </div>
 
-    <h2>Filtri rapidi</h2>
+    <h2>Filtri rapidi
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sui filtri rapidi">i</button>
+      <span class="popover-box" role="tooltip">Scorciatoie combinabili: <b>Solo con CI</b> (integrazione continua configurata), <b>Review≥50%</b> (copertura review delle PR), <b>Push ≤90gg</b> (commit recente), <b>Dependabot</b> (PR automatiche di aggiornamento dipendenze).</span></span>
+    </h2>
     <div class="toggle" id="quick">
       <button data-v="ci">Solo con CI</button>
       <button data-v="rev">Review≥50%</button>
@@ -247,19 +274,41 @@
       <button data-v="dep">Dependabot</button>
     </div>
 
-    <h2>Lingua</h2>
+    <h2>Linguaggio
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Linguaggio">i</button>
+      <span class="popover-box" role="tooltip">Filtra per linguaggio di programmazione principale rilevato nel repository.</span></span>
+    </h2>
     <label><select id="lang"><option value="">Tutte</option></select></label>
 
-    <h2>Licenza</h2>
+    <h2>Licenza
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Licenza">i</button>
+      <span class="popover-box" role="tooltip">Filtra per licenza dichiarata nel repository (identificatore SPDX).</span></span>
+    </h2>
     <label><select id="lic"><option value="">Tutte</option></select></label>
 
-    <h2>Giorni dall'ultimo commit</h2>
+    <h2>Giorni dall'ultimo commit
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Giorni dall'ultimo commit">i</button>
+      <span class="popover-box" role="tooltip">Mostra solo i repository il cui ultimo commit è avvenuto entro il numero di giorni indicato.</span></span>
+    </h2>
     <div class="range-row">≤ <input id="maxStale" type="number" min="0" placeholder="∞"> gg</div>
 
-    <h2>Commit ultimi 90gg</h2>
+    <h2>Commit ultimi 90gg
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Commit ultimi 90 giorni">i</button>
+      <span class="popover-box" role="tooltip">Mostra solo i repository con almeno il numero di commit indicato negli ultimi 90 giorni.</span></span>
+    </h2>
     <div class="range-row">≥ <input id="minCommits" type="number" min="0" placeholder="0"></div>
 
-    <h2>Pesi score</h2>
+    <h2>Pesi score
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sui pesi dello score">i</button>
+      <span class="popover-box" role="tooltip">Lo <b>score</b> (0–100) riassume la salute del repository combinando quattro dimensioni. Sposta i cursori per dare più peso a ciò che ti interessa nel ranking.
+        <ul>
+          <li><b>Freshness</b>: quanto è recente l'ultimo commit.</li>
+          <li><b>Velocity</b>: frequenza dei commit e rapidità di merge delle PR.</li>
+          <li><b>Quality</b>: copertura review, presenza di CI, distribuzione dei contributi.</li>
+          <li><b>Maintenance</b>: gestione delle issue, freschezza di release e dipendenze.</li>
+        </ul>
+      </span></span>
+    </h2>
     <div class="weights">
       <div class="w"><label>Freshness</label><span id="wF-val">25</span></div>
       <input id="wF" type="range" min="0" max="100" value="25">
@@ -560,7 +609,7 @@ function ownerOf(url) { try { const p = new URL(url).pathname.split('/').filter(
 
 // === State ===
 const state = {
-  q: "", kind: "all", active: "any", provider: "all",
+  q: "", kind: "all", active: "any",
   quick: new Set(),
   lang: "", lic: "",
   maxStale: "", minCommits: "",
@@ -593,7 +642,6 @@ function filterRow(r) {
   }
   if (state.kind === "riuso" && !r.is_riuso) return false;
   if (state.kind === "os" && r.is_riuso) return false;
-  if (state.provider !== "all" && (r.provider || "github") !== state.provider) return false;
   if (state.active === "active" && (r.archived || r.disabled)) return false;
   if (state.active === "archived" && !(r.archived || r.disabled)) return false;
   if (state.lang && r.primary_language !== state.lang) return false;
@@ -774,10 +822,6 @@ document.querySelectorAll("#active button").forEach(b => b.addEventListener("cli
   document.querySelectorAll("#active button").forEach(x => x.classList.remove("active"));
   b.classList.add("active"); state.active = b.dataset.v; render();
 }));
-document.querySelectorAll("#provider button").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll("#provider button").forEach(x => x.classList.remove("active"));
-  b.classList.add("active"); state.provider = b.dataset.v; render();
-}));
 document.querySelectorAll("#quick button").forEach(b => b.addEventListener("click", () => {
   b.classList.toggle("active");
   if (state.quick.has(b.dataset.v)) state.quick.delete(b.dataset.v); else state.quick.add(b.dataset.v);
@@ -814,8 +858,26 @@ document.getElementById("d-close").addEventListener("click", closeDrawer);
 document.getElementById("backdrop").addEventListener("click", closeDrawer);
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
 
-document.getElementById("reset").addEventListener("click", () => {
-  state.q = ""; state.kind = "all"; state.active = "any"; state.provider = "all"; state.quick.clear();
+// === Popover informativi (stile Bootstrap Italia) ===
+function closePopovers() {
+  document.querySelectorAll(".popover-box.open").forEach(p => p.classList.remove("open"));
+  document.querySelectorAll('.info-i[aria-expanded="true"]').forEach(b => b.setAttribute("aria-expanded", "false"));
+}
+document.querySelectorAll(".info-i").forEach(btn => btn.addEventListener("click", e => {
+  e.stopPropagation();
+  const pop = btn.nextElementSibling;        // lo .popover-box adiacente
+  const wasOpen = pop.classList.contains("open");
+  closePopovers();
+  if (!wasOpen) { pop.classList.add("open"); btn.setAttribute("aria-expanded", "true"); }
+}));
+// click dentro al popover: non chiudere (permette di leggere/selezionare)
+document.querySelectorAll(".popover-box").forEach(p => p.addEventListener("click", e => e.stopPropagation()));
+// click fuori o Escape: chiudi
+document.addEventListener("click", closePopovers);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePopovers(); });
+
+function resetFilters() {
+  state.q = ""; state.kind = "all"; state.active = "any"; state.quick.clear();
   state.lang = ""; state.lic = ""; state.maxStale = ""; state.minCommits = "";
   state.weights = { f: 25, v: 25, q: 25, m: 25 };
   document.getElementById("q").value = "";
@@ -824,10 +886,12 @@ document.getElementById("reset").addEventListener("click", () => {
   document.getElementById("maxStale").value = "";
   document.getElementById("minCommits").value = "";
   ["wF","wV","wQ","wM"].forEach((id,i)=>{ document.getElementById(id).value = 25; document.getElementById(id+"-val").textContent = "25"; });
-  document.querySelectorAll("#kind button, #active button, #provider button").forEach(b => b.classList.toggle("active", b.dataset.v === "all" || b.dataset.v === "any"));
+  document.querySelectorAll("#kind button, #active button").forEach(b => b.classList.toggle("active", b.dataset.v === "all" || b.dataset.v === "any"));
   document.querySelectorAll("#quick button").forEach(b => b.classList.remove("active"));
   render();
-});
+}
+document.getElementById("reset").addEventListener("click", resetFilters);
+document.getElementById("resetTop").addEventListener("click", resetFilters);
 
 document.getElementById("exportCsv").addEventListener("click", () => {
   const rows = DATA.filter(filterRow);
