@@ -112,6 +112,13 @@
   .badge.arch { background:hsl(350,80%,95%); color:var(--bad); }
   .badge.obs { background:var(--it-gray-100); color:var(--muted); }
   .badge.prov { background:#fff; color:var(--muted); border:1px solid var(--border); margin-left:4px; }
+  /* Badge stato publiccode.yml */
+  .badge.pc-valid { background:hsl(160,60%,90%); color:var(--it-success); }
+  .badge.pc-warning { background:hsl(36,100%,90%); color:var(--it-warning); }
+  .badge.pc-error { background:hsl(350,80%,95%); color:var(--bad); }
+  .badge.pc-unknown { background:var(--it-gray-100); color:var(--muted); }
+  .pc-cat { display:inline-block; margin-left:6px; font-size:11px; color:var(--muted); }
+  #drawer .pc-msg { margin-top:8px; padding:8px 10px; background:var(--it-gray-100); border-radius:4px; font-family:var(--font-mono); font-size:11px; line-height:1.5; color:var(--text); word-break:break-word; }
   .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); }
 
   /* Drawer dettaglio */
@@ -286,6 +293,18 @@
     </h2>
     <label><select id="lic"><option value="">Tutte</option></select></label>
 
+    <h2>Stato publiccode.yml
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Stato publiccode.yml">i</button>
+      <span class="popover-box" role="tooltip">Esito dell'ultima validazione del file <code>publiccode.yml</code> secondo il crawler di Developers Italia. <b>Valido</b>: nessun problema. <b>Avviso</b>: rilievi minori (es. versione del formato non più recente). <b>Errore</b>: la validazione non passa. <b>Sconosciuto</b>: esito non disponibile.</span></span>
+    </h2>
+    <label><select id="pcsev"><option value="">Tutti</option><option value="valid">Valido</option><option value="warning">Avviso</option><option value="error">Errore</option><option value="unknown">Sconosciuto</option></select></label>
+
+    <h2>Tipo di problema publiccode
+      <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Tipo di problema publiccode">i</button>
+      <span class="popover-box" role="tooltip">Raggruppa i repository con publiccode.yml non valido per tipologia di problema rilevata (es. codice organisation/IPA, versione del formato, sintassi YAML).</span></span>
+    </h2>
+    <label><select id="pccat"><option value="">Tutti</option></select></label>
+
     <h2>Giorni dall'ultimo commit
       <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni sul filtro Giorni dall'ultimo commit">i</button>
       <span class="popover-box" role="tooltip">Mostra solo i repository il cui ultimo commit è avvenuto entro il numero di giorni indicato.</span></span>
@@ -340,6 +359,7 @@
           <th data-k="pr_review_coverage_pct" data-num="1">Review %</th>
           <th data-k="issues_open_now" data-num="1">Issue aperte</th>
           <th data-k="has_ci" data-num="1">CI</th>
+          <th data-k="publiccode_severity">Stato publiccode.yml</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -462,6 +482,8 @@ function fmtDate(s) { if (!s) return "—"; return s.substring(0, 10); }
 function fmtDays(d) { if (d === null || d === undefined || d === "") return "—"; if (d < 1) return "<1g"; if (d < 365) return d + "g"; return (d/365).toFixed(1) + "a"; }
 function fmtPct(p) { if (p === null || p === undefined || p === "") return "—"; return p + "%"; }
 function fmtNum(n) { if (n === null || n === undefined || n === "") return "—"; return String(n); }
+const PC_LABEL = { valid: "Valido", warning: "Avviso", error: "Errore", unknown: "—" };
+function pcBadge(sev) { const s = sev || "unknown"; return `<span class="badge pc-${s}">${PC_LABEL[s] || "—"}</span>`; }
 function color(score) {
   if (score >= 75) return "var(--good)";
   if (score >= 50) return "var(--accent2)";
@@ -476,6 +498,7 @@ const state = {
   quick: new Set(),
   lang: "", lic: "",
   maxStale: "", minCommits: "",
+  pcsev: "", pccat: "",
   sort: { k: "score", asc: false },
   weights: { f: 25, v: 25, q: 25, m: 25 },
 };
@@ -486,15 +509,18 @@ for (const r of DATA) {
 }
 
 // Build options
-const langs = new Set(), licenses = new Set();
+const langs = new Set(), licenses = new Set(), pcCats = new Set();
 for (const r of DATA) {
   if (r.primary_language) langs.add(r.primary_language);
   if (r.license) licenses.add(r.license);
+  if (r.publiccode_category) pcCats.add(r.publiccode_category);
 }
 const langSel = document.getElementById("lang");
 [...langs].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; langSel.appendChild(o); });
 const licSel = document.getElementById("lic");
 [...licenses].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; licSel.appendChild(o); });
+const pcCatSel = document.getElementById("pccat");
+[...pcCats].sort().forEach(l => { const o = document.createElement("option"); o.value = l; o.textContent = l; pcCatSel.appendChild(o); });
 
 // === Filter & sort ===
 function filterRow(r) {
@@ -515,6 +541,8 @@ function filterRow(r) {
   if (state.quick.has("dep") && !(num(r.dependabot_pr_in_window) > 0)) return false;
   if (state.maxStale !== "" && !(num(r.days_since_last_commit) !== null && num(r.days_since_last_commit) <= +state.maxStale)) return false;
   if (state.minCommits !== "" && !((num(r.commits_in_window) ?? 0) >= +state.minCommits)) return false;
+  if (state.pcsev && (r.publiccode_severity || "unknown") !== state.pcsev) return false;
+  if (state.pccat && (r.publiccode_category || "") !== state.pccat) return false;
   if (r.error) return false;
   return true;
 }
@@ -530,7 +558,7 @@ function render() {
   const k = state.sort.k, asc = state.sort.asc;
   rows.sort((a, b) => {
     let av = a[k], bv = b[k];
-    if (k === "catalog_name" || k === "organisation_label" || k === "primary_language" || k === "license") {
+    if (k === "catalog_name" || k === "organisation_label" || k === "primary_language" || k === "license" || k === "publiccode_severity") {
       av = (av || "").toString().toLowerCase(); bv = (bv || "").toString().toLowerCase();
       return asc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
@@ -588,6 +616,7 @@ function rowHtml(r) {
     <td class="num">${fmtPct(r.pr_review_coverage_pct)}</td>
     <td class="num">${fmtNum(r.issues_open_now)}</td>
     <td class="num">${r.has_ci ? '✓' : '—'}</td>
+    <td>${pcBadge(r.publiccode_severity)}${(r.publiccode_category) ? ` <span class="pc-cat">${escapeHtml(r.publiccode_category)}</span>` : ''}</td>
   </tr>`;
 }
 
@@ -666,6 +695,14 @@ function openDrawer(url) {
         <dt>Release totali</dt><dd>${fmtNum(r.releases_total)}</dd>
         <dt>Ultima release</dt><dd>${fmtDate(r.latest_release_date)}</dd>
       </dl>
+    </div>
+    <div class="group">
+      <h4>publiccode.yml</h4>
+      <dl>
+        <dt>Stato</dt><dd>${pcBadge(r.publiccode_severity)}</dd>
+        ${r.publiccode_category ? `<dt>Tipo di problema</dt><dd>${escapeHtml(r.publiccode_category)}</dd>` : ''}
+      </dl>
+      ${r.publiccode_message ? `<div class="pc-msg">${escapeHtml(r.publiccode_message)}</div>` : ''}
     </div>`;
   document.getElementById("drawer").classList.add("open");
   document.getElementById("backdrop").classList.add("show");
@@ -692,6 +729,8 @@ document.querySelectorAll("#quick button").forEach(b => b.addEventListener("clic
 }));
 document.getElementById("lang").addEventListener("change", e => { state.lang = e.target.value; render(); });
 document.getElementById("lic").addEventListener("change", e => { state.lic = e.target.value; render(); });
+document.getElementById("pcsev").addEventListener("change", e => { state.pcsev = e.target.value; render(); });
+document.getElementById("pccat").addEventListener("change", e => { state.pccat = e.target.value; render(); });
 document.getElementById("maxStale").addEventListener("input", e => { state.maxStale = e.target.value; render(); });
 document.getElementById("minCommits").addEventListener("input", e => { state.minCommits = e.target.value; render(); });
 
@@ -742,10 +781,13 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closePopover
 function resetFilters() {
   state.q = ""; state.kind = "all"; state.active = "any"; state.quick.clear();
   state.lang = ""; state.lic = ""; state.maxStale = ""; state.minCommits = "";
+  state.pcsev = ""; state.pccat = "";
   state.weights = { f: 25, v: 25, q: 25, m: 25 };
   document.getElementById("q").value = "";
   document.getElementById("lang").value = "";
   document.getElementById("lic").value = "";
+  document.getElementById("pcsev").value = "";
+  document.getElementById("pccat").value = "";
   document.getElementById("maxStale").value = "";
   document.getElementById("minCommits").value = "";
   ["wF","wV","wQ","wM"].forEach((id,i)=>{ document.getElementById(id).value = 25; document.getElementById(id+"-val").textContent = "25"; });
@@ -758,7 +800,7 @@ document.getElementById("resetTop").addEventListener("click", resetFilters);
 
 document.getElementById("exportCsv").addEventListener("click", () => {
   const rows = DATA.filter(filterRow);
-  const cols = ["score","catalog_name","name_with_owner","url","organisation_label","is_riuso","codice_ipa","primary_language","license","days_since_last_commit","commits_in_window","commit_authors_in_window","bus_factor_top1_pct","pr_total_in_window","pr_merged_in_window","pr_median_lead_time_days","pr_p90_lead_time_days","pr_review_coverage_pct","issues_open_now","oldest_open_issue_days","issue_close_ratio_pct","dependabot_pr_in_window","dependency_files","has_ci","releases_total","latest_release_date","archived","fork"];
+  const cols = ["score","catalog_name","name_with_owner","url","organisation_label","is_riuso","codice_ipa","primary_language","license","days_since_last_commit","commits_in_window","commit_authors_in_window","bus_factor_top1_pct","pr_total_in_window","pr_merged_in_window","pr_median_lead_time_days","pr_p90_lead_time_days","pr_review_coverage_pct","issues_open_now","oldest_open_issue_days","issue_close_ratio_pct","dependabot_pr_in_window","dependency_files","has_ci","releases_total","latest_release_date","publiccode_severity","publiccode_category","publiccode_message","archived","fork"];
   const esc = v => { if (v === null || v === undefined) return ""; const s = String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
   const csv = [cols.join(",")].concat(rows.map(r => cols.map(c => esc(r[c])).join(","))).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });

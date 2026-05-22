@@ -8,6 +8,7 @@ ordinamento, score composito modificabile, e dettaglio per repository.
 from __future__ import annotations
 
 import json
+import re
 from collections import Counter
 from datetime import datetime
 from html import escape
@@ -17,6 +18,7 @@ from statistics import median
 OUT = Path("docs/index.html")
 METRICS = Path("data/metrics.jsonl")  # output unico di metrics.py (tutti i provider)
 CATALOG = Path("data/software.jsonl")
+PUBLICCODE = Path("data/publiccode.jsonl")  # output di publiccode_status.py (opzionale)
 
 # Markup statico del pannello (HTML/CSS/JS) con i segnaposto __DATA__ e __INFO__.
 # Tenuto in un file separato per manutenibilità (syntax highlighting, lint, ecc.);
@@ -36,7 +38,87 @@ def load_catalog() -> dict[str, dict]:
     return idx
 
 
-def enrich(metrics: list[dict], catalog: dict[str, dict]) -> list[dict]:
+def load_publiccode() -> dict[str, dict]:
+    """Carica data/publiccode.jsonl indicizzato per id software (vuoto se assente)."""
+    idx: dict[str, dict] = {}
+    if not PUBLICCODE.exists():
+        return idx
+    for line in PUBLICCODE.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        if r.get("id"):
+            idx[r["id"]] = r
+    return idx
+
+
+def pc_severity(message: str) -> str:
+    """Severità della validazione publiccode.yml: valid | warning | error.
+
+    Derivata dal messaggio dell'ultimo log del crawler. Gli avvisi (es.
+    versione publiccode.yml non più recente) sono distinti dagli errori veri.
+    """
+    if "GOOD publiccode.yml" in message:
+        return "valid"
+    ml = message.lower()
+    only_warning = (": warning:" in ml or "is not the latest version" in ml) and ": error:" not in ml
+    return "warning" if only_warning else "error"
+
+
+def pc_category(message: str) -> str:
+    """Etichetta della tipologia di problema (per raggruppamento/filtro).
+
+    L'avviso "versione non più recente" è quasi sempre presente accanto a un
+    errore vero, quindi viene considerato per ultimo: la categoria riflette
+    l'errore di validazione reale, non l'avviso di formato.
+    """
+    ml = message.lower()
+    if "publiccode.yml" in ml and "not found" in ml:
+        return "publiccode.yml non trovato"
+    if any(s in ml for s in ("could not clone", "repository not found", "fatal:", "remote:")):
+        return "Repository irraggiungibile"
+    if "organisation is" in ml and "was expected" in ml:
+        return "Codice organisation/IPA"
+    # Primo errore di validazione del parser: riga "... error: <campo>: ..."
+    for line in message.splitlines():
+        low = line.lower()
+        if ": error:" not in low:
+            continue
+        seg = low.split(": error:", 1)[1].strip()
+        field = re.split(r"[\[:\s]", seg, 1)[0]
+        if field.startswith("localisation"):
+            return "Localizzazione"
+        if field.startswith("maintenance"):
+            return "Manutenzione / contatti"
+        if field.startswith("description"):
+            return "Descrizione"
+        if field.startswith(("legal", "license")) or "license" in seg:
+            return "Licenza"
+        if field.startswith(("url", "landingurl", "isbasedon", "logo", "monochromelogo")):
+            return "URL / asset non valido"
+        if "required" in seg:
+            return "Campo obbligatorio mancante"
+        if any(s in low for s in ("mapping", "unmarshal", "yaml")):
+            return "Errore di sintassi YAML"
+        return "Altro errore di validazione"
+    if "is not the latest version" in ml or "publiccodeymlversion" in ml:
+        return "Versione publiccode.yml non aggiornata"
+    return "Altro"
+
+
+def pc_clean_message(message: str) -> str:
+    """Estrae il motivo del problema dal log, ripulito dal boilerplate."""
+    if not message:
+        return ""
+    idx = message.find("BAD publiccode.yml:")
+    if idx != -1:
+        text = message[idx + len("BAD publiccode.yml:"):]
+    else:
+        text = "\n".join(l for l in message.splitlines() if l.strip() and "found at" not in l)
+    return " ".join(text.split()).strip()
+
+
+def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, dict]) -> list[dict]:
     out = []
     for m in metrics:
         url = m.get("url", "")
@@ -56,6 +138,19 @@ def enrich(metrics: list[dict], catalog: dict[str, dict]) -> list[dict]:
         desc = pc.get("description") or {}
         it = desc.get("it-IT") if isinstance(desc, dict) else None
         m2["short_description"] = (it or {}).get("shortDescription", "") if isinstance(it, dict) else ""
+
+        # --- Stato di validazione publiccode.yml (da data/publiccode.jsonl) ---
+        pcrec = publiccode.get(cat.get("id")) if cat.get("id") else None
+        msg = (pcrec or {}).get("message") or ""
+        if pcrec is None or not pcrec.get("fetched", True) or not msg:
+            m2["publiccode_severity"] = "unknown"
+            m2["publiccode_category"] = ""
+            m2["publiccode_message"] = ""
+        else:
+            sev = pc_severity(msg)
+            m2["publiccode_severity"] = sev
+            m2["publiccode_category"] = "" if sev == "valid" else pc_category(msg)
+            m2["publiccode_message"] = "" if sev == "valid" else pc_clean_message(msg)
         out.append(m2)
     return out
 
@@ -161,6 +256,14 @@ def compute_findings(data: list[dict]) -> dict:
     f["by_provider"] = sorted(prov_c.items(), key=lambda x: -x[1])
     f["by_provider_err"] = dict(prov_err)
 
+    pc_sev: Counter = Counter(r.get("publiccode_severity", "unknown") for r in data)
+    f["pc_valid"] = pc_sev.get("valid", 0)
+    f["pc_warning"] = pc_sev.get("warning", 0)
+    f["pc_error"] = pc_sev.get("error", 0)
+    f["pc_unknown"] = pc_sev.get("unknown", 0)
+    pc_cat: Counter = Counter(r["publiccode_category"] for r in data if r.get("publiccode_category"))
+    f["pc_top_categories"] = pc_cat.most_common(8)
+
     return f
 
 
@@ -211,6 +314,9 @@ def render_info_html(f: dict) -> str:
     lic_bars = "".join([bar_row(lic, n, f["analyzed"]) for lic, n in f["top_licenses"]])
     provider_bars = "".join([bar_row(p, n, f["analyzed"]) for p, n in f["by_provider"]])
     prov_err_html = ", ".join(f"{p}: {n}" for p, n in f["by_provider_err"].items()) or "0"
+    pc_problems = f["pc_warning"] + f["pc_error"]
+    pc_cat_bars = "".join(bar_row(lbl, n, pc_problems) for lbl, n in f["pc_top_categories"]) or \
+        '<div class="bar-row"><span class="bar-l">—</span></div>'
 
     return f"""
 <section id="view-info" hidden>
@@ -262,6 +368,17 @@ def render_info_html(f: dict) -> str:
       <b>{f['has_dependabot']} ({f['has_dependabot_pct']}%)</b> hanno ricevuto, nella
       finestra, PR automatiche di aggiornamento delle dipendenze (Dependabot/Renovate).
     </p>
+
+    <h4>Validazione del publiccode.yml</h4>
+    <p>
+      Esito dell'ultima validazione del <code>publiccode.yml</code> registrata dal
+      crawler di Developers Italia: <b>{f['pc_valid']}</b> validi,
+      <b>{f['pc_warning']}</b> con avvisi, <b>{f['pc_error']}</b> con errori,
+      <b>{f['pc_unknown']}</b> senza esito disponibile. Gli avvisi (es. versione del
+      formato non più recente) sono distinti dagli errori di validazione veri e propri.
+    </p>
+    <p>Tipologie di problema più diffuse:</p>
+    <div class="bars">{pc_cat_bars}</div>
 
     <h4>Concentrazione dei contributi</h4>
     <p>
@@ -361,7 +478,10 @@ def main() -> None:
     for m in metrics:
         m.setdefault("provider", "github")  # retrocompat. con eventuali record vecchi
     catalog = load_catalog()
-    enriched = enrich(metrics, catalog)
+    publiccode = load_publiccode()
+    if not publiccode:
+        print("  (data/publiccode.jsonl assente: stato publiccode.yml = sconosciuto)")
+    enriched = enrich(metrics, catalog, publiccode)
     payload = json.dumps(enriched, ensure_ascii=False, default=str)
     findings = compute_findings(enriched)
     info_html = render_info_html(findings)
