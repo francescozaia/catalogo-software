@@ -101,6 +101,9 @@
   tbody tr { cursor:pointer; transition:background .15s; }
   tbody tr:nth-child(even) { background:hsl(0,0%,98.5%); }
   tbody tr:hover { background:var(--it-primary-lighter); }
+  tbody tr.row-err, tbody tr.row-err:nth-child(even) { background:hsl(350,90%,98.5%); }
+  tbody tr.row-err:hover { background:hsl(350,80%,96%); }
+  .repo-cell .err-reason { color:var(--bad); }
   tbody td.num { text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   tbody td.score { font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   .repo-cell > div:first-child { font-weight:600; }
@@ -117,6 +120,10 @@
   .badge.pc-warning { background:hsl(36,100%,90%); color:var(--it-warning); }
   .badge.pc-error { background:hsl(350,80%,95%); color:var(--bad); }
   .badge.pc-unknown { background:var(--it-gray-100); color:var(--muted); }
+  .badge.err { background:hsl(350,80%,95%); color:var(--bad); }
+  #drawer .drawer-err { background:hsl(350,80%,96%); border:1px solid hsl(350,70%,88%); border-radius:4px; padding:10px 12px; margin-bottom:14px; color:var(--bad); font-size:13px; }
+  #drawer .drawer-err b { display:block; margin-bottom:2px; }
+  #drawer .drawer-err .raw { margin-top:6px; font-family:var(--font-mono); font-size:11px; color:var(--muted); word-break:break-word; }
   .pc-cat { display:inline-block; margin-left:6px; font-size:11px; color:var(--muted); }
   #drawer .pc-msg { margin-top:8px; padding:8px 10px; background:var(--it-gray-100); border-radius:4px; font-family:var(--font-mono); font-size:11px; line-height:1.5; color:var(--text); word-break:break-word; }
   .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); }
@@ -482,6 +489,13 @@ function fmtDate(s) { if (!s) return "—"; return s.substring(0, 10); }
 function fmtDays(d) { if (d === null || d === undefined || d === "") return "—"; if (d < 1) return "<1g"; if (d < 365) return d + "g"; return (d/365).toFixed(1) + "a"; }
 function fmtPct(p) { if (p === null || p === undefined || p === "") return "—"; return p + "%"; }
 function fmtNum(n) { if (n === null || n === undefined || n === "") return "—"; return String(n); }
+function errReason(e) {
+  const s = String(e || "").toLowerCase();
+  if (s.includes("not_found") || s.includes("404")) return "repository non trovato (404)";
+  if (s.includes("403") || s.includes("privato") || s.includes("auth")) return "accesso negato / privato (403)";
+  if (s.includes("non interpretabile")) return "URL non interpretabile";
+  return (String(e || "errore")).slice(0, 90);
+}
 const PC_LABEL = { valid: "Valido", warning: "Avviso", error: "Errore", unknown: "—" };
 function pcBadge(sev) { const s = sev || "unknown"; return `<span class="badge pc-${s}">${PC_LABEL[s] || "—"}</span>`; }
 function color(score) {
@@ -543,7 +557,9 @@ function filterRow(r) {
   if (state.minCommits !== "" && !((num(r.commits_in_window) ?? 0) >= +state.minCommits)) return false;
   if (state.pcsev && (r.publiccode_severity || "unknown") !== state.pcsev) return false;
   if (state.pccat && (r.publiccode_category || "") !== state.pccat) return false;
-  if (r.error) return false;
+  // i repo non recuperabili (errore metriche) restano visibili: hanno comunque
+  // dati di catalogo e stato publiccode; i filtri basati sulle metriche li
+  // escludono naturalmente perché quei valori sono assenti.
   return true;
 }
 
@@ -600,13 +616,21 @@ function render() {
 function rowHtml(r) {
   const score = r.score ?? 0;
   const sc = color(score);
-  return `<tr data-url="${escapeHtml(r.url)}">
-    <td class="num score" style="color:${sc}">${score}<span class="score-bar"><i style="width:${score}%;background:${sc}"></i></span></td>
+  const scoreCell = r.error
+    ? `<td class="num score" style="color:var(--muted)">—</td>`
+    : `<td class="num score" style="color:${sc}">${score}<span class="score-bar"><i style="width:${score}%;background:${sc}"></i></span></td>`;
+  const provBadge = (r.provider && r.provider !== 'github') ? `<span class="badge prov">${r.provider==='gitlab'?'GL':'BB'}</span>` : '';
+  const errBadge = r.error ? ` <span class="badge err">non recuperabile</span>` : '';
+  const orgLine = r.error
+    ? `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml((r.url || '').replace(/^https?:\/\//, ''))}</a> · <span class="err-reason">${escapeHtml(errReason(r.error))}</span>`
+    : `<a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || (r.url || "").replace('https://github.com/',''))}</a>`;
+  return `<tr data-url="${escapeHtml(r.url)}"${r.error ? ' class="row-err"' : ''}>
+    ${scoreCell}
     <td class="repo-cell">
-      <div>${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${(r.provider && r.provider !== 'github') ? `<span class="badge prov">${r.provider==='gitlab'?'GL':'BB'}</span>` : ''}</div>
-      <div class="org"><a href="${escapeHtml(r.url || '#')}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || (r.url || "").replace('https://github.com/',''))}</a></div>
+      <div>${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${provBadge}${errBadge}</div>
+      <div class="org">${orgLine}</div>
     </td>
-    <td>${r.is_riuso ? `<span class="badge riuso">IPA:${escapeHtml(r.codice_ipa)}</span>` : `<span class="badge os">${escapeHtml(ownerOf(r.url || ''))}</span>`}</td>
+    <td>${r.is_riuso ? `<span class="badge riuso">${r.codice_ipa ? 'IPA:' + escapeHtml(r.codice_ipa) : 'Riuso'}</span>` : `<span class="badge os">${escapeHtml(ownerOf(r.url || ''))}</span>`}</td>
     <td>${escapeHtml(r.primary_language || "—")}</td>
     <td>${escapeHtml(r.license || "—")}</td>
     <td class="num">${fmtDays(num(r.days_since_last_commit))}${r.archived ? ' <span class="badge arch">archiv.</span>' : ''}</td>
@@ -628,6 +652,37 @@ function openDrawer(url) {
   if (!r) return;
   document.getElementById("d-title").textContent = r.catalog_name || r.name_with_owner || url;
   document.getElementById("d-sub").innerHTML = `<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.name_with_owner || r.url)}</a>${r.codice_ipa ? ` — IPA <b>${escapeHtml(r.codice_ipa)}</b>` : ''}`;
+
+  // Repo non recuperabile: niente metriche, mostriamo motivo + dati di catalogo
+  if (r.error) {
+    document.getElementById("d-body").innerHTML = `
+      <div class="drawer-err">
+        <b>Repository non recuperabile</b>
+        <div>${escapeHtml(errReason(r.error))}</div>
+        <div class="raw">${escapeHtml(String(r.error))}</div>
+      </div>
+      ${r.short_description ? `<div class="desc">${escapeHtml(r.short_description)}</div>` : ''}
+      <div class="group">
+        <h4>Dati di catalogo</h4>
+        <dl>
+          <dt>Tipo</dt><dd>${r.is_riuso ? (r.codice_ipa ? 'A riuso · IPA ' + escapeHtml(r.codice_ipa) : 'A riuso') : 'Open source'}</dd>
+          <dt>Catalog status</dt><dd>${escapeHtml(r.development_status || '—')}</dd>
+          <dt>Release date (cat.)</dt><dd>${escapeHtml(r.release_date || '—')}</dd>
+        </dl>
+      </div>
+      <div class="group">
+        <h4>publiccode.yml</h4>
+        <dl>
+          <dt>Stato</dt><dd>${pcBadge(r.publiccode_severity)}</dd>
+          ${r.publiccode_category ? `<dt>Tipo di problema</dt><dd>${escapeHtml(r.publiccode_category)}</dd>` : ''}
+        </dl>
+        ${r.publiccode_message ? `<div class="pc-msg">${escapeHtml(r.publiccode_message)}</div>` : ''}
+      </div>`;
+    document.getElementById("drawer").classList.add("open");
+    document.getElementById("backdrop").classList.add("show");
+    return;
+  }
+
   const w = state.weights;
   const fr = freshnessScore(r), vl = velocityScore(r), ql = qualityScore(r), mt = maintenanceScore(r);
   const body = document.getElementById("d-body");

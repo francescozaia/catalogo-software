@@ -118,22 +118,49 @@ def pc_clean_message(message: str) -> str:
     return " ".join(text.split()).strip()
 
 
+def classify_reuse(pc: dict) -> tuple[bool, str, str]:
+    """Distingue software a riuso da open, replicando la logica ufficiale.
+
+    Riferimento: italia/developers.italia.it searchEngine.js — è "a riuso" se è
+    valorizzato uno qualsiasi tra organisation.uri, IT.riuso.codiceIPA o
+    it.riuso.codiceIPA (senza richiedere il prefisso urn:x-italian-pa:).
+
+    Restituisce (is_riuso, organisation_uri, codice_ipa). Il codice IPA mostrato
+    è il codiceIPA esplicito se presente, altrimenti l'URN organisation senza
+    prefisso; vuoto quando organisation.uri è un URL e non c'è un codiceIPA.
+    """
+    org = pc.get("organisation") if isinstance(pc.get("organisation"), dict) else {}
+    org_uri = org.get("uri")
+    it_up = pc.get("IT") if isinstance(pc.get("IT"), dict) else {}
+    it_low = pc.get("it") if isinstance(pc.get("it"), dict) else {}
+    riuso_up = it_up.get("riuso") if isinstance(it_up.get("riuso"), dict) else {}
+    riuso_low = it_low.get("riuso") if isinstance(it_low.get("riuso"), dict) else {}
+    riuso_code = riuso_up.get("codiceIPA") or riuso_low.get("codiceIPA")
+
+    is_riuso = bool(org_uri or riuso_code)
+    if riuso_code:
+        codice_ipa = str(riuso_code)
+    elif isinstance(org_uri, str) and org_uri.startswith("urn:x-italian-pa:"):
+        codice_ipa = org_uri[len("urn:x-italian-pa:"):]
+    else:
+        codice_ipa = ""
+    return is_riuso, (org_uri or ""), codice_ipa
+
+
 def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, dict]) -> list[dict]:
     out = []
     for m in metrics:
         url = m.get("url", "")
         cat = catalog.get(url, {})
         pc = cat.get("publiccode") or {}
-        org = pc.get("organisation") or {}
-        org_uri = org.get("uri") if isinstance(org, dict) else None
-        is_riuso = bool(org_uri) and str(org_uri).startswith("urn:x-italian-pa:")
+        is_riuso, org_uri, codice_ipa = classify_reuse(pc)
         m2 = dict(m)
         m2["catalog_name"] = pc.get("name", "")
         m2["development_status"] = pc.get("developmentStatus", "")
         m2["release_date"] = pc.get("releaseDate", "")
         m2["organisation_uri"] = org_uri or ""
         m2["is_riuso"] = is_riuso
-        m2["codice_ipa"] = (org_uri or "").replace("urn:x-italian-pa:", "") if is_riuso else ""
+        m2["codice_ipa"] = codice_ipa
         m2["categories"] = pc.get("categories") or []
         desc = pc.get("description") or {}
         it = desc.get("it-IT") if isinstance(desc, dict) else None
@@ -444,6 +471,29 @@ def render_info_html(f: dict) -> str:
       lungo da nascondere abbandoni recenti.
     </p>
 
+    <h4>Classificazione «a riuso» vs «open source»</h4>
+    <p>
+      Un software è <b>a riuso</b> se nel suo <code>publiccode.yml</code> è
+      valorizzato almeno uno tra <code>organisation.uri</code>,
+      <code>IT.riuso.codiceIPA</code> o <code>it.riuso.codiceIPA</code>; altrimenti
+      è <b>open source</b>. È la stessa regola del motore di ricerca ufficiale.
+      Su questo dataset: <b>{f['riuso']}</b> a riuso, <b>{f['os']}</b> open source.
+    </p>
+    <p>
+      Questo conteggio può differire di qualche unità da quello mostrato su
+      developers.italia.it, e <b>non è un errore</b>. Noi classifichiamo in base al
+      <b>publiccode.yml così come dichiarato</b> e servito dall'API ufficiale
+      <code>api.developers.italia.it</code>; l'indice di ricerca del sito è invece
+      <b>arricchito in fase di indicizzazione</b>. Per i software pubblicati da una
+      PA, quell'indice inietta il codice IPA dell'editore in
+      <code>organisation.uri</code> / <code>IT.riuso.codiceIPA</code> anche quando
+      l'autore non l'ha scritto nel file (spostandoli così tra gli «a riuso»);
+      viceversa scarta valori di <code>organisation</code> non-PA (es. l'URL di
+      un'azienda privata). Abbiamo scelto di restare fedeli a ciò che è
+      effettivamente dichiarato nei file, anche per rendere visibili i metadati da
+      correggere.
+    </p>
+
     <h4>Score composito (0–100, modificabile dal pannello)</h4>
     <p>Quattro sub-score 0–100, combinati come media pesata. I pesi di default sono 25/25/25/25; l'utente può modificarli con gli slider per far emergere repo diversi a seconda dell'angolo di analisi.</p>
     <ul>
@@ -459,7 +509,7 @@ def render_info_html(f: dict) -> str:
       <li><b>Review coverage GitLab</b>: usa <code>user_notes_count &gt; 0</code> come proxy (commenti sulla MR). Senza autenticazione l'API delle <code>approvals</code> non è disponibile.</li>
       <li><b>Troncamento a 100</b>: la query GraphQL/REST prende le 100 PR/issue più recenti. Per progetti molto attivi (improbabili in PA) il conteggio in finestra è un lower bound.</li>
       <li><b>Bus factor</b>: calcolato sui soli autori della finestra di 90 giorni, non sull'intera storia del repo.</li>
-      <li><b>Repo non più raggiungibili</b>: il catalogo include URL che restituiscono 404 (repo cancellati o rinominati) o 403 (repo resi privati): segnalati come errore nel pannello.</li>
+      <li><b>Repo non recuperabili</b>: il catalogo include URL che restituiscono 404 (repo cancellati o rinominati) o 403 (repo resi privati). Restano comunque <b>visibili in tabella</b>, marcati «non recuperabile» con il motivo, perché conservano i dati di catalogo (classificazione riuso/open, stato publiccode.yml); non hanno però metriche di attività.</li>
     </ul>
 
     <h4>Riproducibilità</h4>

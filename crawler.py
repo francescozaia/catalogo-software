@@ -166,11 +166,20 @@ def flatten_row(record: dict[str, Any]) -> dict[str, str]:
     piattaforme = it_ext.get("piattaforme") or {}
     riuso = it_ext.get("riuso") or {}
 
+    # Logica ufficiale (italia/developers.italia.it searchEngine.js): è "a riuso"
+    # se è valorizzato uno qualsiasi tra organisation.uri, IT.riuso.codiceIPA o
+    # it.riuso.codiceIPA — senza richiedere il prefisso urn:x-italian-pa:.
     org_uri = organisation.get("uri") if isinstance(organisation, dict) else None
-    codice_ipa = riuso.get("codiceIPA") if isinstance(riuso, dict) else None
-    if not codice_ipa and isinstance(org_uri, str) and org_uri.startswith("urn:x-italian-pa:"):
-        codice_ipa = org_uri.split(":", 2)[-1]
-    is_riuso = bool(codice_ipa) or (isinstance(org_uri, str) and org_uri.startswith("urn:x-italian-pa:"))
+    riuso_low = pc.get("it") if isinstance(pc.get("it"), dict) else {}
+    riuso_low = riuso_low.get("riuso") if isinstance(riuso_low.get("riuso"), dict) else {}
+    riuso_code = (riuso.get("codiceIPA") if isinstance(riuso, dict) else None) or riuso_low.get("codiceIPA")
+    is_riuso = bool(org_uri or riuso_code)
+    if riuso_code:
+        codice_ipa = str(riuso_code)
+    elif isinstance(org_uri, str) and org_uri.startswith("urn:x-italian-pa:"):
+        codice_ipa = org_uri[len("urn:x-italian-pa:"):]
+    else:
+        codice_ipa = ""
 
     contractors = maintenance.get("contractors") if isinstance(maintenance, dict) else None
     contractor_names: list[str] = []
