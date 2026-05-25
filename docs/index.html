@@ -119,23 +119,27 @@
   tbody.rec:hover { background:var(--it-primary-lighter); }
   tbody.rec.row-err, tbody.rec.row-err:nth-of-type(even) { background:hsl(350,90%,98.5%); }
   tbody.rec.row-err:hover { background:hsl(350,80%,96%); }
-  tbody.rec .ra > td { padding-bottom:4px; }
-  tbody.rec .rb > td { padding-top:0; padding-bottom:10px; white-space:normal; }
+  tbody.rec > tr > td { padding-top:10px; padding-bottom:10px; }
+  /* La cella "Software" ospita anche le caratteristiche: deve poter andare a capo */
+  .repo-cell { white-space:normal; }
+  .rec-sep { border-top:1px solid var(--border); margin:7px 0 6px; }
+  .chip-more { display:inline-block; padding:1px 8px; border-radius:50rem; font-size:11px; font-weight:700; color:var(--it-primary); background:#fff; border:1px solid var(--it-primary); }
   .repo-cell .err-reason { color:var(--bad); }
   tbody td.num { text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   tbody td.score { font-weight:700; font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
   .sw-name { font-weight:600; }
   .repo-cell .org { color:var(--muted); font-size:12px; font-family:var(--font-mono); margin-top:2px; }
-  .org-cell .org-name { margin-top:3px; font-size:12px; }
-  .org-cell .org-uri { margin-top:1px; font-size:11px; color:var(--muted); font-family:var(--font-mono); }
-  /* Riga caratteristiche */
-  .rb-chars { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline; }
-  .char { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:5px; }
+  .org-cell { white-space:normal; max-width:150px; }
+  .org-cell .org-name { margin-top:3px; font-size:12px; word-break:break-word; }
+  .org-cell .org-uri { margin-top:1px; font-size:11px; color:var(--muted); font-family:var(--font-mono); word-break:break-all; }
+  /* Caratteristiche: ogni sezione su una riga propria, le pill vanno a capo */
+  .rb-chars { display:flex; flex-direction:column; gap:4px; }
+  .char { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px; }
   .char-l { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; }
   .char-v { font-family:var(--font-mono); font-size:12px; }
   .chip { display:inline-block; padding:1px 8px; border-radius:50rem; font-size:11px; background:var(--it-primary-lighter); color:var(--it-primary-active); }
-  .rb-metrics { margin-top:6px; font-size:11px; color:var(--muted); }
-  .rb-metrics b { color:var(--text); font-family:var(--font-mono); }
+  .rb-foot { margin-top:7px; font-size:11px; color:var(--muted); }
+  .rb-foot b { color:var(--text); font-family:var(--font-mono); }
   .score-bar { display:inline-block; width:34px; height:6px; background:var(--it-gray-100); border-radius:50rem; overflow:hidden; margin-left:6px; vertical-align:middle; }
   .score-bar > i { display:block; height:100%; }
   .badge { display:inline-block; padding:2px 8px; border-radius:50rem; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-family:var(--font-sans); }
@@ -577,7 +581,7 @@
     </p>
     <p>
       Questo conteggio può differire di qualche unità da quello mostrato su
-      developers.italia.it, e <b>non è un errore</b>. Noi classifichiamo in base al
+      developers.italia.it, e <b>non è un errore</b>. Qui si classifica in base al
       <b>publiccode.yml così come dichiarato</b> e servito dall'API ufficiale
       <code>api.developers.italia.it</code>; l'indice di ricerca del sito è invece
       <b>arricchito in fase di indicizzazione</b>. Per i software pubblicati da una
@@ -585,7 +589,7 @@
       <code>organisation.uri</code> / <code>IT.riuso.codiceIPA</code> anche quando
       l'autore non l'ha scritto nel file (spostandoli così tra gli «a riuso»);
       viceversa scarta valori di <code>organisation</code> non-PA (es. l'URL di
-      un'azienda privata). Abbiamo scelto di restare fedeli a ciò che è
+      un'azienda privata). Si è scelto di restare fedeli a ciò che è
       effettivamente dichiarato nei file, anche per rendere visibili i metadati da
       correggere.
     </p>
@@ -923,7 +927,12 @@ function render() {
 }
 
 function chipsHtml(arr) { return (arr || []).map(x => `<span class="chip">${escapeHtml(x)}</span>`).join(""); }
-function charBlock(label, arr) { if (!arr || !arr.length) return ""; return `<span class="char"><span class="char-l">${label}</span> ${chipsHtml(arr)}</span>`; }
+function charBlock(label, arr, cap) {
+  if (!arr || !arr.length) return "";
+  const limited = (cap && arr.length > cap) ? arr.slice(0, cap) : arr;
+  const more = (cap && arr.length > cap) ? `<span class="chip-more">+${arr.length - cap}</span>` : "";
+  return `<span class="char"><span class="char-l">${label}</span> ${chipsHtml(limited)}${more}</span>`;
+}
 
 function rowHtml(r) {
   const score = r.score ?? 0;
@@ -948,15 +957,24 @@ function rowHtml(r) {
     orgCell = `<span class="badge os">open</span><div class="org-name">${escapeHtml(r.organisation_name || ownerOf(r.url || ''))}</div>`;
   }
 
-  const metricsLine = r.error ? '' :
-    `<div class="rb-metrics">repo · commit 90gg <b>${fmtNum(r.commits_in_window)}</b> · PR merged <b>${fmtNum(r.pr_merged_in_window)}</b> · lead time <b>${fmtNum(r.pr_median_lead_time_days)}</b> · review <b>${fmtPct(r.pr_review_coverage_pct)}</b> · issue aperte <b>${fmtNum(r.issues_open_now)}</b> · CI <b>${r.has_ci ? 'sì' : 'no'}</b></div>`;
+  const repoMetrics = r.error ? '' :
+    `repo · commit 90gg <b>${fmtNum(r.commits_in_window)}</b> · PR merged <b>${fmtNum(r.pr_merged_in_window)}</b> · lead time <b>${fmtNum(r.pr_median_lead_time_days)}</b> · review <b>${fmtPct(r.pr_review_coverage_pct)}</b> · issue aperte <b>${fmtNum(r.issues_open_now)}</b> · CI <b>${r.has_ci ? 'sì' : 'no'}</b>`;
+  const verPart = `versione publiccode.yml <b>${escapeHtml(r.publiccode_version || '—')}</b>`;
+  const footLine = `<div class="rb-foot">${[repoMetrics, verPart].filter(Boolean).join(' · ')}</div>`;
 
   return `<tbody class="rec${r.error ? ' row-err' : ''}" data-url="${escapeHtml(r.url)}">
-    <tr class="ra">
+    <tr>
       ${scoreCell}
       <td class="repo-cell">
         <div class="sw-name">${escapeHtml(r.catalog_name || r.name_with_owner || "—")}${provBadge}${errBadge}</div>
         <div class="org">${catLink}${repoLink}</div>
+        <div class="rec-sep"></div>
+        <div class="rb-chars">
+          ${charBlock('Categorie', r.categories, 6)}
+          ${charBlock('Piattaforme', r.platforms, 6)}
+          ${charBlock('Audience', r.audience_scope, 6)}
+        </div>
+        ${footLine}
       </td>
       <td class="org-cell">${orgCell}</td>
       <td>${escapeHtml(r.software_type || "—")}</td>
@@ -965,15 +983,6 @@ function rowHtml(r) {
       <td class="num">${fmtDays(num(r.days_since_last_commit))}${r.archived ? ' <span class="badge arch">archiv.</span>' : ''}</td>
       <td>${pcBadge(r.publiccode_severity)}${(r.publiccode_category) ? ` <span class="pc-cat">${escapeHtml(r.publiccode_category)}</span>` : ''}</td>
     </tr>
-    <tr class="rb"><td colspan="8">
-      <div class="rb-chars">
-        ${charBlock('Categorie', r.categories)}
-        ${charBlock('Piattaforme', r.platforms)}
-        ${charBlock('Audience', r.audience_scope)}
-        <span class="char"><span class="char-l">Versione publiccode</span> <span class="char-v">${escapeHtml(r.publiccode_version || '—')}</span></span>
-      </div>
-      ${metricsLine}
-    </td></tr>
   </tbody>`;
 }
 

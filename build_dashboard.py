@@ -519,7 +519,7 @@ def render_info_html(f: dict) -> str:
     </p>
     <p>
       Questo conteggio può differire di qualche unità da quello mostrato su
-      developers.italia.it, e <b>non è un errore</b>. Noi classifichiamo in base al
+      developers.italia.it, e <b>non è un errore</b>. Qui si classifica in base al
       <b>publiccode.yml così come dichiarato</b> e servito dall'API ufficiale
       <code>api.developers.italia.it</code>; l'indice di ricerca del sito è invece
       <b>arricchito in fase di indicizzazione</b>. Per i software pubblicati da una
@@ -527,7 +527,7 @@ def render_info_html(f: dict) -> str:
       <code>organisation.uri</code> / <code>IT.riuso.codiceIPA</code> anche quando
       l'autore non l'ha scritto nel file (spostandoli così tra gli «a riuso»);
       viceversa scarta valori di <code>organisation</code> non-PA (es. l'URL di
-      un'azienda privata). Abbiamo scelto di restare fedeli a ciò che è
+      un'azienda privata). Si è scelto di restare fedeli a ciò che è
       effettivamente dichiarato nei file, anche per rendere visibili i metadati da
       correggere.
     </p>
