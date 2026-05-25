@@ -19,6 +19,7 @@ OUT = Path("docs/index.html")
 METRICS = Path("data/metrics.jsonl")  # output unico di metrics.py (tutti i provider)
 CATALOG = Path("data/software.jsonl")
 PUBLICCODE = Path("data/publiccode.jsonl")  # output di publiccode_status.py (opzionale)
+INDICEPA = Path("data/indicepa.jsonl")  # output di indicepa.py — contatti enti (opzionale)
 
 # Markup statico del pannello (HTML/CSS/JS) con i segnaposto __DATA__ e __INFO__.
 # Tenuto in un file separato per manutenibilità (syntax highlighting, lint, ecc.);
@@ -49,6 +50,20 @@ def load_publiccode() -> dict[str, dict]:
         r = json.loads(line)
         if r.get("id"):
             idx[r["id"]] = r
+    return idx
+
+
+def load_indicepa() -> dict[str, dict]:
+    """Carica data/indicepa.jsonl indicizzato per codice IPA minuscolo (vuoto se assente)."""
+    idx: dict[str, dict] = {}
+    if not INDICEPA.exists():
+        return idx
+    for line in INDICEPA.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        if r.get("codice_ipa"):
+            idx[str(r["codice_ipa"]).lower()] = r
     return idx
 
 
@@ -569,8 +584,12 @@ def main() -> None:
     publiccode = load_publiccode()
     if not publiccode:
         print("  (data/publiccode.jsonl assente: stato publiccode.yml = sconosciuto)")
+    indicepa = load_indicepa()
+    if not indicepa:
+        print("  (data/indicepa.jsonl assente: contatti enti non disponibili)")
     enriched = enrich(metrics, catalog, publiccode)
     payload = json.dumps(enriched, ensure_ascii=False, default=str)
+    indicepa_json = json.dumps(indicepa, ensure_ascii=False)
     findings = compute_findings(enriched)
     info_html = render_info_html(findings)
     # data dell'ultimo scaricamento delle metriche (mtime di data/metrics.jsonl)
@@ -579,6 +598,7 @@ def main() -> None:
     # il payload (blob JSON, grande) viene sostituito per ultimo
     html = (template
             .replace("__UPDATED__", updated)
+            .replace("__INDICEPA__", indicepa_json)
             .replace("__INFO__", info_html)
             .replace("__DATA__", payload))
     OUT.write_text(html, encoding="utf-8")

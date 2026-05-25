@@ -200,6 +200,8 @@
   .tabs button:hover { background:var(--it-navbar-active); }
   .tabs button.active,
   .tabs button[aria-expanded="true"]{ background:var(--it-navbar-active); border-bottom-color:#fff; }
+  /* tab nascosta: visibile solo con la query string dedicata (vedi JS) */
+  .tabs button.gated { display:none; }
   /* Pulsante mostra/nascondi filtri nella navbar */
   .tabs-action { align-self:center; margin-left:auto; margin-right:4px; display:inline-flex; align-items:center; gap:7px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.45); padding:6px 14px; font-family:var(--font-sans); font-weight:600; font-size:13px; cursor:pointer; transition:all .2s ease-in-out; }
   .tabs-action:hover { background:var(--it-navbar-active); }
@@ -232,6 +234,49 @@
   #view-info { padding:0; overflow-y:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
   #view-info[hidden] { display:none; }
   .info-wrap { max-width:940px; margin:0 auto; padding:40px 32px 80px; }
+
+  /* ── Vista "Analisi per ente" ── */
+  #view-enti { padding:0; overflow-y:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
+  #view-enti[hidden] { display:none; }
+  .enti-wrap { max-width:1100px; margin:0 auto; padding:32px 28px 80px; }
+  .enti-wrap h2 { font-size:24px; font-weight:700; margin:0 0 8px; }
+  .enti-wrap p.lead { font-family:var(--font-serif); font-style:italic; font-size:15px; color:var(--it-dark); line-height:1.6; margin-bottom:18px; }
+  .enti-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+  .enti-filter-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; }
+  .enti-filter { display:flex; flex-wrap:wrap; gap:6px; }
+  .enti-chip { padding:4px 11px; border-radius:50rem; border:1px solid var(--border); background:#fff; color:var(--muted); font:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s ease-in-out; }
+  .enti-chip:hover { border-color:var(--it-primary); color:var(--it-primary); }
+  .enti-chip.active { background:var(--it-primary); color:#fff; border-color:var(--it-primary); }
+  .ente-card { background:#fff; border:1px solid var(--border); border-radius:6px; margin-bottom:10px; overflow:hidden; }
+  .ente-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; cursor:pointer; transition:background .15s; }
+  .ente-head:hover { background:var(--it-primary-lighter); }
+  .ente-caret { display:inline-block; color:var(--muted); font-size:12px; transition:transform .15s ease; }
+  .ente-card.open .ente-caret { transform:rotate(90deg); }
+  .ente-title { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
+  .ente-name { font-size:15px; font-weight:700; }
+  .ente-tip { font-size:12px; color:var(--muted); }
+  .ente-head-stats { display:flex; align-items:center; gap:14px; flex-shrink:0; font-size:12px; color:var(--muted); white-space:nowrap; }
+  .ente-head-stats b { color:var(--text); font-family:var(--font-mono); }
+  .ente-prio { background:var(--it-dark); color:#fff; border-radius:50rem; padding:3px 12px; font-size:12px; font-weight:700; font-family:var(--font-mono); }
+  .ente-detail { display:none; padding:0 16px 14px; }
+  .ente-card.open .ente-detail { display:block; }
+  .ente-contacts { display:flex; flex-wrap:wrap; gap:6px 20px; margin:4px 0 12px; padding:10px 12px; background:var(--it-primary-lighter); border-radius:4px; font-size:13px; }
+  .cc-l { font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-right:4px; }
+  .ente-noinfo { margin:4px 0 12px; padding:8px 12px; background:hsl(36,100%,94%); color:var(--it-warning); border-radius:4px; font-size:12px; }
+  .ente-sw-list { display:flex; flex-direction:column; gap:8px; }
+  .ente-sw { border:1px solid var(--border); border-radius:4px; padding:9px 12px; cursor:pointer; transition:background .15s; }
+  .ente-sw:hover { background:var(--it-primary-lighter); }
+  .ente-sw-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .ente-sw-name { font-weight:600; font-size:14px; }
+  .ente-sw-meta { font-size:11px; color:var(--muted); font-family:var(--font-mono); white-space:nowrap; }
+  .ente-sw-issues { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+  .ente-sw-ok { margin-top:6px; font-size:12px; color:var(--it-success); }
+  .iss { font-size:11px; padding:1px 8px; border-radius:50rem; background:hsl(350,80%,95%); color:var(--bad); }
+  .iss.iss-pc_warning, .iss.iss-no_ci, .iss.iss-no_contacts, .iss.iss-archived { background:hsl(36,100%,90%); color:var(--it-warning); }
+  .sw-contacts { margin-top:8px; padding-top:6px; border-top:1px dotted var(--border); }
+  .sw-contacts .person { padding:3px 0; }
+  .sw-contacts .person b { font-size:13px; }
+  .sw-contacts .person-meta { font-size:12px; color:var(--muted); word-break:break-word; }
   .info-wrap h2 { font-size:28px; font-weight:700; margin:0 0 8px; letter-spacing:-.01em; }
   .info-wrap h3 { font-size:20px; font-weight:700; color:var(--it-dark); margin:38px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--it-primary); }
   .info-wrap h4 { font-size:15px; font-weight:700; margin:24px 0 8px; color:var(--it-primary); }
@@ -284,6 +329,7 @@
   </div>
   <nav class="tabs" role="tablist">
     <button data-view="catalogo" class="active">Catalogo</button>
+    <button data-view="enti" id="tab-enti" class="gated">Analisi per ente</button>
     <button data-view="info">Metodologia &amp; findings</button>
     <button id="filtersToggle" class="tabs-action" type="button" aria-expanded="true" aria-controls="view-catalogo" title="Mostra/nascondi i filtri">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
@@ -445,6 +491,27 @@
   </section>
 </main>
 
+<section id="view-enti" hidden>
+  <div class="enti-wrap">
+    <h2>Analisi per ente</h2>
+    <p class="lead">
+      Vista pensata per il lavoro di sollecito: i software <b>a riuso con un codice IPA</b>
+      sono raggruppati per amministrazione. Per ogni ente trovi i <b>contatti ufficiali</b>
+      (da IndicePA: PEC, responsabile, sito) e i contatti tecnici dichiarati nei
+      <code>publiccode.yml</code> dei suoi software, con l'elenco degli <b>interventi
+      da richiedere</b>. Gli enti sono ordinati per <b>priorità</b> = gravità dei
+      problemi × impatto (riuso). Restano fuori i software open source senza ente e
+      quelli a riuso senza codice IPA.
+    </p>
+    <div class="enti-toolbar">
+      <span class="enti-filter-label">Filtra per problema:</span>
+      <div class="enti-filter" id="entiFilter"></div>
+    </div>
+    <div id="enti-list"></div>
+    <div id="enti-empty" class="empty" hidden>Nessun ente con i filtri selezionati.</div>
+  </div>
+</section>
+
 __INFO__
 
 <div id="filters-backdrop"></div>
@@ -462,6 +529,7 @@ __INFO__
 
 <script>
 const DATA = __DATA__;
+const INDICEPA = __INDICEPA__;
 
 // === Scoring ===
 function freshnessScore(r) {
@@ -1106,6 +1174,8 @@ document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventList
   catalogoMain.hidden = v !== "catalogo";
   const info = document.getElementById("view-info");
   if (info) info.hidden = v !== "info";
+  const enti = document.getElementById("view-enti");
+  if (enti) enti.hidden = v !== "enti";
   // il toggle filtri ha senso solo nel catalogo; fuori, nascondilo e chiudi l'overlay
   filtersToggle.style.display = (v === "catalogo") ? "" : "none";
   if (v !== "catalogo") filtersBackdrop.classList.remove("show");
@@ -1122,6 +1192,155 @@ function syncHeaderHeight() {
 }
 syncHeaderHeight();
 window.addEventListener("resize", syncHeaderHeight);
+
+// ════════════════════════ Vista "Analisi per ente" ════════════════════════
+const ISSUE_TYPES = [
+  ['pc_invalid', 'publiccode non valido'],
+  ['pc_warning', 'publiccode con avviso'],
+  ['stale2y', 'fermo >2 anni'],
+  ['stale1y', 'fermo >1 anno'],
+  ['unreachable', 'repo non recuperabile'],
+  ['no_ci', 'senza CI'],
+  ['no_contacts', 'senza contatti'],
+  ['archived', 'archiviato'],
+];
+const entiState = { types: new Set(), open: new Set() };
+
+// Interventi da richiedere (actionable) per un software, con peso per la priorità
+function softwareIssues(r) {
+  const out = [];
+  if (r.error) out.push({ t: 'unreachable', label: 'Repository non recuperabile', w: 4 });
+  if (r.publiccode_severity === 'error') out.push({ t: 'pc_invalid', label: 'publiccode.yml non valido' + (r.publiccode_category ? ` — ${r.publiccode_category}` : ''), w: 3 });
+  else if (r.publiccode_severity === 'warning') out.push({ t: 'pc_warning', label: 'publiccode.yml con avviso', w: 1 });
+  const d = num(r.days_since_last_commit);
+  if (!r.error && !r.archived && d !== null) {
+    if (d > 730) out.push({ t: 'stale2y', label: 'Fermo da oltre 2 anni', w: 3 });
+    else if (d > 365) out.push({ t: 'stale1y', label: 'Fermo da oltre 1 anno', w: 2 });
+  }
+  if (!r.error && !r.has_ci) out.push({ t: 'no_ci', label: 'Nessuna CI', w: 1 });
+  if (!(r.contractors && r.contractors.length) && !(r.contacts && r.contacts.length))
+    out.push({ t: 'no_contacts', label: 'Nessun contatto di manutenzione nel publiccode', w: 1 });
+  if (r.archived) out.push({ t: 'archived', label: 'Repository archiviato', w: 1 });
+  return out;
+}
+
+// Aggregazione per ente (solo software a riuso con codice IPA)
+function buildEnti() {
+  const map = new Map();
+  for (const r of DATA) {
+    if (!r.is_riuso || !r.codice_ipa) continue;
+    const key = r.codice_ipa.toLowerCase();
+    if (!map.has(key)) map.set(key, { ipa: r.codice_ipa, info: INDICEPA[key] || null, software: [], impact: 0, severity: 0 });
+    const e = map.get(key);
+    const issues = softwareIssues(r);
+    e.software.push({ r, issues });
+    e.impact += (num(r.used_by_count) || 0);
+    e.severity += issues.reduce((s, i) => s + i.w, 0);
+  }
+  const enti = [...map.values()];
+  for (const e of enti) {
+    e.name = (e.info && e.info.denominazione) || e.software[0].r.organisation_name || `IPA ${e.ipa}`;
+    e.priority = Math.round(e.severity * (1 + Math.log1p(e.impact)));  // gravità × impatto
+    e.problemCount = e.software.reduce((s, sw) => s + sw.issues.length, 0);
+  }
+  enti.sort((a, b) => b.priority - a.priority || b.severity - a.severity || b.impact - a.impact);
+  return enti;
+}
+const ALL_ENTI = buildEnti();
+
+function swContactsHtml(sw) {
+  const ppl = [];
+  (sw.r.contractors || []).forEach(p => ppl.push(personLine(p)));
+  (sw.r.contacts || []).forEach(p => ppl.push(personLine(p)));
+  return ppl.length ? `<div class="sw-contacts">${ppl.join('')}</div>` : '';
+}
+
+function renderEnti() {
+  const sel = entiState.types;
+  const enti = ALL_ENTI
+    .map(e => sel.size === 0 ? e : { ...e, software: e.software.filter(sw => sw.issues.some(i => sel.has(i.t))) })
+    .filter(e => e.software.length > 0);
+  document.getElementById("enti-empty").hidden = enti.length > 0;
+  document.getElementById("enti-list").innerHTML = enti.map(e => {
+    const info = e.info;
+    const contatti = info ? `<div class="ente-contacts">
+        ${info.pec ? `<span class="cc"><span class="cc-l">PEC</span> <a href="mailto:${escapeHtml(info.pec)}">${escapeHtml(info.pec)}</a></span>` : ''}
+        ${info.responsabile ? `<span class="cc"><span class="cc-l">Responsabile</span> ${escapeHtml(info.responsabile)}</span>` : ''}
+        ${info.sito ? `<span class="cc"><span class="cc-l">Sito</span> <a href="${escapeHtml(info.sito)}" target="_blank" rel="noopener">${escapeHtml(info.sito.replace(/^https?:\/\//, ''))}</a></span>` : ''}
+      </div>` : `<div class="ente-noinfo">Contatti ente non disponibili in IndicePA (codice ${escapeHtml(e.ipa)})</div>`;
+    const swRows = e.software.map(sw => {
+      const r = sw.r;
+      const issues = sw.issues.length
+        ? `<div class="ente-sw-issues">${sw.issues.map(i => `<span class="iss iss-${i.t}">${escapeHtml(i.label)}</span>`).join('')}</div>`
+        : `<div class="ente-sw-ok">Nessun problema rilevato</div>`;
+      return `<div class="ente-sw" data-url="${escapeHtml(r.url)}">
+        <div class="ente-sw-head">
+          <span class="ente-sw-name">${escapeHtml(r.catalog_name || r.name_with_owner || r.url)}</span>
+          <span class="ente-sw-meta">${escapeHtml(r.software_type || '')}${r.used_by_count ? ` · riuso ${r.used_by_count}` : ''}</span>
+        </div>
+        ${issues}
+        ${swContactsHtml(sw)}
+      </div>`;
+    }).join('');
+    const isOpen = entiState.open.has(e.ipa.toLowerCase());
+    return `<div class="ente-card${isOpen ? ' open' : ''}" data-ipa="${escapeHtml(e.ipa.toLowerCase())}">
+      <div class="ente-head">
+        <div class="ente-title">
+          <span class="ente-caret" aria-hidden="true">▸</span>
+          <span class="ente-name">${escapeHtml(e.name)}</span>
+          <span class="badge riuso">IPA:${escapeHtml(e.ipa)}</span>
+          ${info && info.tipologia ? `<span class="ente-tip">${escapeHtml(info.tipologia)}${info.regione ? ' · ' + escapeHtml(info.regione) : ''}</span>` : ''}
+        </div>
+        <div class="ente-head-stats">
+          <span><b>${e.software.length}</b> software</span>
+          <span><b>${e.problemCount}</b> problemi</span>
+          <span>riuso <b>${e.impact}</b></span>
+          <span class="ente-prio" title="gravità ${e.severity} × impatto (riuso ${e.impact})">priorità ${e.priority}</span>
+        </div>
+      </div>
+      <div class="ente-detail">
+        ${contatti}
+        <div class="ente-sw-list">${swRows}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// chip filtro per tipologia di problema
+(function () {
+  const c = document.getElementById("entiFilter");
+  c.innerHTML = ISSUE_TYPES.map(([t, label]) => `<button type="button" class="enti-chip" data-t="${t}">${label}</button>`).join("");
+  c.querySelectorAll(".enti-chip").forEach(b => b.addEventListener("click", () => {
+    const t = b.dataset.t;
+    if (entiState.types.has(t)) entiState.types.delete(t); else entiState.types.add(t);
+    b.classList.toggle("active");
+    renderEnti();
+  }));
+})();
+// clic: sul software apre il drawer; sull'intestazione espande/comprime la card
+document.getElementById("enti-list").addEventListener("click", e => {
+  if (e.target.tagName === "A") return;
+  const sw = e.target.closest(".ente-sw");
+  if (sw) { openDrawer(sw.dataset.url); return; }
+  const head = e.target.closest(".ente-head");
+  if (head) {
+    const card = head.closest(".ente-card");
+    const ipa = card.dataset.ipa;
+    if (entiState.open.has(ipa)) entiState.open.delete(ipa); else entiState.open.add(ipa);
+    card.classList.toggle("open");
+  }
+});
+renderEnti();
+
+// La tab "Analisi per ente" è nascosta dalla navigazione regolare: compare solo
+// se l'URL contiene la query string dedicata (es. ?enti). Non è una protezione
+// di sicurezza, serve solo a non mostrarla a chi ci arriva per caso.
+const ENTI_GATE_PARAM = "enti";
+if (new URLSearchParams(location.search).has(ENTI_GATE_PARAM)) {
+  const tab = document.getElementById("tab-enti");
+  tab.classList.remove("gated");
+  tab.click();  // apri direttamente la vista per ente
+}
 
 render();
 </script>
