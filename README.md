@@ -28,6 +28,7 @@ I risultati confluiscono in un pannello HTML interattivo.
 python3 crawler.py           # legge le API di Developers Italia → data/software.{jsonl,csv}   (~1 min)
 python3 metrics.py           # interroga i repository (GitHub/GitLab/Bitbucket) → data/metrics.{jsonl,csv}  (~15 min)
 python3 publiccode_status.py # stato di validazione del publiccode.yml → data/publiccode.jsonl  (~9 min)
+python3 indicepa.py          # contatti ufficiali degli enti (PEC, ecc.) da IndicePA → data/indicepa.jsonl  (~5 s)
 python3 build_dashboard.py   # unisce template.html + data/ → docs/index.html
 ```
 
@@ -40,6 +41,7 @@ Il pannello è un singolo file HTML autonomo: per vederlo in locale basta aprire
 crawler.py           estrazione del catalogo dall'API ufficiale
 metrics.py           metriche di salute dei repository (multi-provider)
 publiccode_status.py stato di validazione del publiccode.yml (API log Developers Italia)
+indicepa.py          contatti ufficiali degli enti da IndicePA (per la vista "Analisi per ente")
 build_dashboard.py   generazione del pannello
 template.html        markup del pannello (HTML/CSS/JS) con segnaposto __DATA__/__INFO__
 requirements.txt     dipendenze Python
