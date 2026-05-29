@@ -200,8 +200,6 @@
   .tabs button:hover { background:var(--it-navbar-active); }
   .tabs button.active,
   .tabs button[aria-expanded="true"]{ background:var(--it-navbar-active); border-bottom-color:#fff; }
-  /* tab nascosta: visibile solo con la query string dedicata (vedi JS) */
-  .tabs button.gated { display:none; }
   /* Pulsante mostra/nascondi filtri nella navbar */
   .tabs-action { align-self:center; margin-left:auto; margin-right:4px; display:inline-flex; align-items:center; gap:7px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.45); padding:6px 14px; font-family:var(--font-sans); font-weight:600; font-size:13px; cursor:pointer; transition:all .2s ease-in-out; }
   .tabs-action:hover { background:var(--it-navbar-active); }
@@ -328,9 +326,9 @@
     </div>
   </div>
   <nav class="tabs" role="tablist">
-    <button data-view="catalogo" class="active">Catalogo</button>
-    <button data-view="enti" id="tab-enti" class="gated">Analisi per ente</button>
-    <button data-view="info">Metodologia &amp; findings</button>
+    <button data-view="catalogo" class="active">Analisi del codice</button>
+    <button data-view="enti">Analisi per ente</button>
+    <button data-view="info">Metodologia</button>
     <button id="filtersToggle" class="tabs-action" type="button" aria-expanded="true" aria-controls="view-catalogo" title="Mostra/nascondi i filtri">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
       Filtri
@@ -1502,16 +1500,6 @@ document.getElementById("enti-list").addEventListener("click", e => {
   }
 });
 renderEnti();
-
-// La tab "Analisi per ente" è nascosta dalla navigazione regolare: compare solo
-// se l'URL contiene la query string dedicata (es. ?enti). Non è una protezione
-// di sicurezza, serve solo a non mostrarla a chi ci arriva per caso.
-const ENTI_GATE_PARAM = "enti";
-if (new URLSearchParams(location.search).has(ENTI_GATE_PARAM)) {
-  const tab = document.getElementById("tab-enti");
-  tab.classList.remove("gated");
-  tab.click();  // apri direttamente la vista per ente
-}
 
 render();
 </script>
