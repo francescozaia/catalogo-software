@@ -29,6 +29,7 @@ python3 crawler.py           # legge le API di Developers Italia → data/softwa
 python3 metrics.py           # interroga i repository (GitHub/GitLab/Bitbucket) → data/metrics.{jsonl,csv}  (~15 min)
 python3 publiccode_status.py # stato di validazione del publiccode.yml → data/publiccode.jsonl  (~9 min)
 python3 indicepa.py          # contatti ufficiali degli enti (PEC, ecc.) da IndicePA → data/indicepa.jsonl  (~5 s)
+python3 taxonomies.py        # totali dei vocabolari publiccode.yml → data/taxonomies.json  (~1 s)
 python3 build_dashboard.py   # unisce template.html + data/ → docs/index.html
 ```
 
@@ -42,6 +43,7 @@ crawler.py           estrazione del catalogo dall'API ufficiale
 metrics.py           metriche di salute dei repository (multi-provider)
 publiccode_status.py stato di validazione del publiccode.yml (API log Developers Italia)
 indicepa.py          contatti ufficiali degli enti da IndicePA (per la vista "Analisi per ente")
+taxonomies.py        totali dei vocabolari publiccode.yml (per la vista "Infografiche")
 build_dashboard.py   generazione del pannello
 template.html        markup del pannello (HTML/CSS/JS) con segnaposto __DATA__/__INFO__
 requirements.txt     dipendenze Python

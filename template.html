@@ -275,6 +275,40 @@
   .sw-contacts .person { padding:3px 0; }
   .sw-contacts .person b { font-size:13px; }
   .sw-contacts .person-meta { font-size:12px; color:var(--muted); word-break:break-word; }
+
+  /* ── Vista "Infografiche" ── */
+  #view-grafici { padding:0; overflow-y:auto; height:calc(100vh - var(--header-h)); background:var(--bg); }
+  #view-grafici[hidden] { display:none; }
+  .grafici-wrap { max-width:1200px; margin:0 auto; padding:32px 28px 80px; }
+  .grafici-wrap h2 { font-size:24px; font-weight:700; margin:0 0 8px; }
+  .grafici-wrap p.lead { font-family:var(--font-serif); font-style:italic; font-size:15px; color:var(--it-dark); line-height:1.6; margin-bottom:24px; }
+  .grafici-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:18px; }
+  @media (max-width:900px) { .grafici-grid { grid-template-columns:1fr; } }
+  .grafico { background:#fff; border:1px solid var(--border); border-radius:6px; padding:18px 20px; }
+  .grafico h3 { font-size:15px; font-weight:700; margin:0 0 4px; color:var(--it-dark); }
+  .grafico .sub { font-size:11px; color:var(--muted); margin-bottom:14px; }
+  .grafico .chart-row { display:flex; gap:18px; align-items:flex-start; }
+  .grafico .pie-wrap { flex-shrink:0; }
+  .grafico svg.pie { display:block; }
+  .grafico .legend { flex:1; min-width:0; font-size:12px; max-height:260px; overflow-y:auto; }
+  .grafico .legend-item { display:flex; align-items:center; gap:7px; padding:2px 0; }
+  .grafico .legend-swatch { width:11px; height:11px; flex-shrink:0; border-radius:2px; }
+  .grafico .legend-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .grafico .legend-count { color:var(--muted); font-family:var(--font-mono); flex-shrink:0; font-size:11px; }
+  .grafico .legend-pct { color:var(--text); font-family:var(--font-mono); font-weight:600; flex-shrink:0; font-size:11px; min-width:44px; text-align:right; }
+  .grafico .coverage { margin-top:14px; padding:10px 12px; background:hsl(36,100%,94%); border-radius:4px; font-size:12px; color:var(--it-dark); }
+  .grafico .coverage b { font-family:var(--font-mono); color:var(--it-warning); }
+  .grafico .coverage a { color:var(--it-primary); }
+  .grafico .no-cov { margin-top:14px; padding:8px 12px; background:var(--it-gray-100); border-radius:4px; font-size:12px; color:var(--muted); font-style:italic; }
+  .grafico .unused-details { margin-top:8px; }
+  .grafico .unused-details summary { cursor:pointer; padding:8px 12px; background:hsl(36,100%,94%); border-radius:4px; font-size:12px; color:var(--it-dark); list-style:none; }
+  .grafico .unused-details summary::-webkit-details-marker { display:none; }
+  .grafico .unused-details summary::before { content:"▸"; display:inline-block; margin-right:6px; color:var(--it-warning); transition:transform .15s; }
+  .grafico .unused-details[open] summary::before { transform:rotate(90deg); }
+  .grafico .unused-details summary b { font-family:var(--font-mono); color:var(--it-warning); }
+  .grafico .unused-list { margin-top:8px; padding:10px 12px; background:#fff; border:1px solid var(--border); border-radius:4px; max-height:240px; overflow-y:auto; }
+  .grafico .unused-list .chip-warn { display:inline-block; padding:2px 9px; border-radius:50rem; background:hsl(36,100%,92%); color:var(--it-dark); margin:2px 3px 0 0; font-size:11px; font-family:var(--font-mono); }
+  .grafico .unused-ok { margin-top:8px; padding:8px 12px; background:hsl(160,60%,92%); border-radius:4px; font-size:12px; color:var(--it-success); }
   .info-wrap h2 { font-size:28px; font-weight:700; margin:0 0 8px; letter-spacing:-.01em; }
   .info-wrap h3 { font-size:20px; font-weight:700; color:var(--it-dark); margin:38px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--it-primary); }
   .info-wrap h4 { font-size:15px; font-weight:700; margin:24px 0 8px; color:var(--it-primary); }
@@ -328,6 +362,7 @@
   <nav class="tabs" role="tablist">
     <button data-view="catalogo" class="active">Analisi del codice</button>
     <button data-view="enti">Analisi per ente</button>
+    <button data-view="grafici">Infografiche</button>
     <button data-view="info">Metodologia</button>
     <button id="filtersToggle" class="tabs-action" type="button" aria-expanded="true" aria-controls="view-catalogo" title="Mostra/nascondi i filtri">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
@@ -510,6 +545,25 @@
   </div>
 </section>
 
+<section id="view-grafici" hidden>
+  <div class="grafici-wrap">
+    <h2>Infografiche</h2>
+    <p class="lead">
+      Distribuzione dei valori dichiarati nei <code>publiccode.yml</code> del
+      catalogo per <b>linguaggio</b>, <b>piattaforma</b>, <b>categoria</b> e
+      <b>audience</b>. Per i tre campi a vocabolario chiuso (piattaforma,
+      categoria, audience) viene messa in evidenza la lista dei <b>valori previsti
+      dallo standard ma mai dichiarati</b> nel catalogo.
+    </p>
+    <div class="grafici-grid">
+      <div class="grafico" id="grafico-language"></div>
+      <div class="grafico" id="grafico-platforms"></div>
+      <div class="grafico" id="grafico-categories"></div>
+      <div class="grafico" id="grafico-audience"></div>
+    </div>
+  </div>
+</section>
+
 __INFO__
 
 <div id="filters-backdrop"></div>
@@ -528,6 +582,7 @@ __INFO__
 <script>
 const DATA = __DATA__;
 const INDICEPA = __INDICEPA__;
+const COVERAGE = __COVERAGE__;
 
 // === Scoring ===
 function freshnessScore(r) {
@@ -1174,6 +1229,8 @@ document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventList
   if (info) info.hidden = v !== "info";
   const enti = document.getElementById("view-enti");
   if (enti) enti.hidden = v !== "enti";
+  const grafici = document.getElementById("view-grafici");
+  if (grafici) grafici.hidden = v !== "grafici";
   // il toggle filtri ha senso solo nel catalogo; fuori, nascondilo e chiudi l'overlay
   filtersToggle.style.display = (v === "catalogo") ? "" : "none";
   if (v !== "catalogo") filtersBackdrop.classList.remove("show");
@@ -1329,6 +1386,156 @@ document.getElementById("enti-list").addEventListener("click", e => {
   }
 });
 renderEnti();
+
+// ════════════════════════ Vista "Infografiche" ════════════════════════
+// Grafici a torta sulla distribuzione di 4 campi nel catalogo + statistica
+// di copertura per i campi a vocabolario chiuso (categorie, audience,
+// piattaforme). La JS calcola SOLO la distribuzione dei valori effettivamente
+// usati: per il dettaglio dei valori previsti dallo standard si rimanda alla
+// documentazione ufficiale del publiccode.yml.
+const PALETTE = [
+  "#0066cc", "#1a4470", "#00804d", "#996600", "#a01540",
+  "#5b9bd5", "#7a3d99", "#207030", "#c97b00", "#7f8c8d",
+  "#406080", "#a0a0a0"
+];
+
+function countSingle(field) {
+  const m = new Map();
+  for (const r of DATA) {
+    const v = r[field];
+    if (!v) continue;
+    m.set(v, (m.get(v) || 0) + 1);
+  }
+  return m;
+}
+function countList(field) {
+  const m = new Map();
+  for (const r of DATA) {
+    const arr = r[field];
+    if (!Array.isArray(arr)) continue;
+    for (const v of arr) {
+      if (!v) continue;
+      m.set(v, (m.get(v) || 0) + 1);
+    }
+  }
+  return m;
+}
+
+// Converte un Map(valore -> count) in elenco ordinato, con eventuale taglio
+// "Top N + Altri" per limitare il numero di fette.
+function toItems(map, topN) {
+  const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]);
+  if (!topN || sorted.length <= topN) {
+    return sorted.map(([label, value], i) => ({ label, value, color: PALETTE[i % PALETTE.length] }));
+  }
+  const top = sorted.slice(0, topN);
+  const rest = sorted.slice(topN);
+  const restSum = rest.reduce((s, [, v]) => s + v, 0);
+  const items = top.map(([label, value], i) => ({ label, value, color: PALETTE[i % PALETTE.length] }));
+  items.push({ label: `Altri (${rest.length})`, value: restSum, color: "#cccccc", isRest: true });
+  return items;
+}
+
+function pieSvg(items, size) {
+  const total = items.reduce((s, it) => s + it.value, 0);
+  if (!total) return "";
+  const cx = size / 2, cy = size / 2, r = size / 2 - 1;
+  let a0 = -Math.PI / 2;  // partiamo dalle 12
+  const paths = items.map(it => {
+    const frac = it.value / total;
+    const a1 = a0 + frac * 2 * Math.PI;
+    const x1 = cx + r * Math.cos(a0), y1 = cy + r * Math.sin(a0);
+    const x2 = cx + r * Math.cos(a1), y2 = cy + r * Math.sin(a1);
+    const large = frac > 0.5 ? 1 : 0;
+    // fetta singola al 100%: usa un cerchio pieno per evitare degenerazione
+    const d = (frac >= 0.9999)
+      ? `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`
+      : `M ${cx} ${cy} L ${x1.toFixed(3)} ${y1.toFixed(3)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(3)} ${y2.toFixed(3)} Z`;
+    a0 = a1;
+    return `<path d="${d}" fill="${it.color}" stroke="#fff" stroke-width="1"/>`;
+  }).join("");
+  return `<svg class="pie" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>`;
+}
+
+function legendHtml(items, total) {
+  return items.map(it => {
+    const pct = total ? (100 * it.value / total).toFixed(1) : "0";
+    return `<div class="legend-item">
+      <span class="legend-swatch" style="background:${it.color}"></span>
+      <span class="legend-label" title="${escapeHtml(it.label)}">${escapeHtml(it.label)}</span>
+      <span class="legend-count">${it.value}</span>
+      <span class="legend-pct">${pct}%</span>
+    </div>`;
+  }).join("");
+}
+
+function renderGrafico(containerId, title, sub, items, distinctUsed, cov) {
+  const total = items.reduce((s, it) => s + it.value, 0);
+  // blocco "copertura": solo se è un campo con vocabolario chiuso (cov presente)
+  let covBlock = "";
+  if (cov && cov.total) {
+    const used = distinctUsed;
+    const unused = (cov.unused || []);
+    const openNote = cov.open
+      ? ` Il campo è <i>semi-aperto</i>: lo standard ammette anche valori fuori da questa lista.`
+      : "";
+    const coverageLabel = cov.open
+      ? `Adesione ai valori canonici: <b>${used}</b> di <b>${cov.total}</b> usati nel catalogo.`
+      : `Copertura del vocabolario standard: <b>${used}</b> di <b>${cov.total}</b> valori usati nel catalogo.`;
+    const summaryLabel = cov.open ? "canonici non adottati" : "mai dichiarati nel catalogo";
+    const okLabel = cov.open
+      ? "Tutti i valori canonici risultano dichiarati almeno una volta."
+      : "Tutti i valori previsti dallo standard risultano dichiarati almeno una volta.";
+    const unusedDetails = unused.length
+      ? `<details class="unused-details">
+          <summary><b>${unused.length}</b> ${summaryLabel} — clicca per vedere</summary>
+          <div class="unused-list">${unused.map(x => `<span class="chip-warn">${escapeHtml(x)}</span>`).join("")}</div>
+        </details>`
+      : `<div class="unused-ok">${okLabel}</div>`;
+    covBlock = `<div class="coverage">
+      ${coverageLabel}${openNote}
+      Documentazione di riferimento: <a href="${escapeHtml(cov.spec)}" target="_blank" rel="noopener">publiccode.yml spec ↗</a>
+    </div>
+    ${unusedDetails}`;
+  } else {
+    covBlock = `<div class="no-cov">Campo senza vocabolario chiuso: la lista dei "mai usati" non è definita.</div>`;
+  }
+  document.getElementById(containerId).innerHTML = `
+    <h3>${title}</h3>
+    <div class="sub">${sub}</div>
+    <div class="chart-row">
+      <div class="pie-wrap">${pieSvg(items, 200)}</div>
+      <div class="legend">${legendHtml(items, total)}</div>
+    </div>
+    ${covBlock}`;
+}
+
+function renderGrafici() {
+  // Linguaggio (campo singolo, nessun vocabolario chiuso)
+  const lang = countSingle("primary_language");
+  renderGrafico("grafico-language", "Linguaggio principale",
+    `${lang.size} linguaggi distinti rilevati nei repository`,
+    toItems(lang, 10), lang.size, null);
+
+  // Piattaforma (lista, vocabolario chiuso)
+  const plat = countList("platforms");
+  renderGrafico("grafico-platforms", "Piattaforme",
+    `Dichiarazioni totali nel catalogo`,
+    toItems(plat, null), plat.size, COVERAGE.platforms);
+
+  // Categoria (lista, vocabolario chiuso, lista lunga -> Top + Altri)
+  const cat = countList("categories");
+  renderGrafico("grafico-categories", "Categorie",
+    `Top 10 + altre`,
+    toItems(cat, 10), cat.size, COVERAGE.categories);
+
+  // Audience (lista, vocabolario chiuso)
+  const aud = countList("audience_scope");
+  renderGrafico("grafico-audience", "Audience (intendedAudience.scope)",
+    `Dichiarazioni totali nel catalogo`,
+    toItems(aud, null), aud.size, COVERAGE.audience_scope);
+}
+renderGrafici();
 
 render();
 </script>
