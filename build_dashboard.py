@@ -20,6 +20,7 @@ METRICS = Path("data/metrics.jsonl")  # output unico di metrics.py (tutti i prov
 CATALOG = Path("data/software.jsonl")
 PUBLICCODE = Path("data/publiccode.jsonl")  # output di publiccode_status.py (opzionale)
 INDICEPA = Path("data/indicepa.jsonl")  # output di indicepa.py — contatti enti (opzionale)
+TAXONOMIES = Path("data/taxonomies.json")  # output di taxonomies.py — vocabolari publiccode (opzionale)
 
 # Markup statico del pannello (HTML/CSS/JS) con i segnaposto __DATA__ e __INFO__.
 # Tenuto in un file separato per manutenibilità (syntax highlighting, lint, ecc.);
@@ -51,6 +52,18 @@ def load_publiccode() -> dict[str, dict]:
         if r.get("id"):
             idx[r["id"]] = r
     return idx
+
+
+def load_taxonomies() -> dict[str, list[str]]:
+    """Carica taxonomies.json — vocabolari ufficiali del publiccode.yml spec.
+
+    Usati per misurare la copertura del catalogo (valori dichiarati vs. valori
+    previsti dallo standard). Le chiavi che iniziano con `_` sono metadata.
+    """
+    if not TAXONOMIES.exists():
+        return {}
+    raw = json.loads(TAXONOMIES.read_text(encoding="utf-8"))
+    return {k: v for k, v in raw.items() if not k.startswith("_")}
 
 
 def load_indicepa() -> dict[str, dict]:
@@ -587,9 +600,45 @@ def main() -> None:
     indicepa = load_indicepa()
     if not indicepa:
         print("  (data/indicepa.jsonl assente: contatti enti non disponibili)")
+    taxonomies = load_taxonomies()
     enriched = enrich(metrics, catalog, publiccode)
     payload = json.dumps(enriched, ensure_ascii=False, default=str)
     indicepa_json = json.dumps(indicepa, ensure_ascii=False)
+    # Coverage: per ciascun campo a vocabolario chiuso calcoliamo, contro la
+    # tassonomia ufficiale, l'elenco dei valori MAI dichiarati nel catalogo
+    # (insieme alla copertura totale e al link alla documentazione). L'elenco
+    # è il risultato del confronto fra i dati nostri e lo standard, derivato
+    # a build-time così la pagina lo può mostrare in un dettaglio espandibile.
+    def _unused(field: str, taxonomy_key: str) -> list[str]:
+        std = set(taxonomies.get(taxonomy_key, []))
+        if not std:
+            return []
+        used = set()
+        for r in enriched:
+            for v in (r.get(field) or []):
+                if v:
+                    used.add(v)
+        return sorted(std - used)
+
+    coverage = {
+        "categories": {
+            "total": len(taxonomies.get("categories", [])),
+            "unused": _unused("categories", "categories"),
+            "spec": "https://yml.publiccode.tools/",
+        },
+        "audience_scope": {
+            "total": len(taxonomies.get("audience_scope", [])),
+            "unused": _unused("audience_scope", "audience_scope"),
+            "spec": "https://yml.publiccode.tools/",
+        },
+        "platforms": {
+            "total": len(taxonomies.get("platforms", [])),
+            "unused": _unused("platforms", "platforms"),
+            "spec": "https://yml.publiccode.tools/schema.core.html#key-platforms",
+            "open": True,  # set semi-aperto: lo standard ammette anche valori fuori dalla lista
+        },
+    }
+    coverage_json = json.dumps(coverage, ensure_ascii=False)
     findings = compute_findings(enriched)
     info_html = render_info_html(findings)
     # data dell'ultimo scaricamento delle metriche (mtime di data/metrics.jsonl)
@@ -599,6 +648,7 @@ def main() -> None:
     html = (template
             .replace("__UPDATED__", updated)
             .replace("__INDICEPA__", indicepa_json)
+            .replace("__COVERAGE__", coverage_json)
             .replace("__INFO__", info_html)
             .replace("__DATA__", payload))
     OUT.write_text(html, encoding="utf-8")
