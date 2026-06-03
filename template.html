@@ -1219,11 +1219,20 @@ filtersBackdrop.addEventListener("click", () => setFilters(false));
 mqMobile.addEventListener("change", () => setFilters(!mqMobile.matches));
 setFilters(!mqMobile.matches);
 
-// Tab switching (solo i bottoni con data-view; il toggle filtri è escluso)
-document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll(".tabs button[data-view]").forEach(x => x.classList.remove("active"));
-  b.classList.add("active");
-  const v = b.dataset.view;
+// Tab switching: la singola tab è linkabile via URL anchor (es. #infografiche),
+// così si possono condividere link diretti e usare avanti/indietro del browser.
+// Mappatura interna data-view ↔ slug user-facing.
+const VIEW_HASH = {
+  catalogo: "analisi-del-codice",
+  enti: "analisi-per-ente",
+  grafici: "infografiche",
+  info: "metodologia",
+};
+const HASH_VIEW = Object.fromEntries(Object.entries(VIEW_HASH).map(([k, v]) => [v, k]));
+
+function switchTo(v) {
+  if (!v || !VIEW_HASH[v]) v = "catalogo";
+  document.querySelectorAll(".tabs button[data-view]").forEach(x => x.classList.toggle("active", x.dataset.view === v));
   catalogoMain.hidden = v !== "catalogo";
   const info = document.getElementById("view-info");
   if (info) info.hidden = v !== "info";
@@ -1236,7 +1245,20 @@ document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventList
   if (v !== "catalogo") filtersBackdrop.classList.remove("show");
   else if (mqMobile.matches && catalogoMain.classList.contains("filters-open")) filtersBackdrop.classList.add("show");
   window.scrollTo(0, 0);
+}
+
+// Click sui tab → aggiorna l'hash; la commutazione vera avviene in syncFromHash
+document.querySelectorAll(".tabs button[data-view]").forEach(b => b.addEventListener("click", () => {
+  const slug = VIEW_HASH[b.dataset.view];
+  if (location.hash.replace(/^#/, "") === slug) switchTo(b.dataset.view);  // ri-clic sullo stesso tab: scroll-to-top
+  else location.hash = slug;  // hashchange si occupa del resto
 }));
+
+function syncFromHash() {
+  switchTo(HASH_VIEW[location.hash.replace(/^#/, "")]);
+}
+window.addEventListener("hashchange", syncFromHash);
+syncFromHash();
 
 // L'header istituzionale ha altezza variabile (3 livelli, contenuto che va a capo
 // su schermi stretti). Misuriamo l'altezza reale e la propaghiamo come --header-h
