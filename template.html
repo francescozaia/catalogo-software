@@ -239,8 +239,13 @@
   .enti-wrap { max-width:1100px; margin:0 auto; padding:32px 28px 80px; }
   .enti-wrap h2 { font-size:24px; font-weight:700; margin:0 0 8px; }
   .enti-wrap p.lead { font-family:var(--font-serif); font-style:italic; font-size:15px; color:var(--it-dark); line-height:1.6; margin-bottom:18px; }
-  .enti-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
-  .enti-filter-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; }
+  .enti-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .enti-filter-label, .enti-sort-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; }
+  .enti-sort { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+  .enti-sort select { padding:6px 10px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; font-size:13px; cursor:pointer; }
+  .enti-sort select:focus { outline:none; border-color:var(--it-primary); box-shadow:0 0 0 3px hsla(210,100%,40%,.16); }
+  .enti-sort #entiSortDir { width:32px; height:32px; padding:0; border:1px solid var(--border); border-radius:4px; background:#fff; color:var(--it-primary); font-size:12px; cursor:pointer; transition:all .15s; }
+  .enti-sort #entiSortDir:hover { border-color:var(--it-primary); background:var(--it-primary-lighter); }
   .enti-filter { display:flex; flex-wrap:wrap; gap:6px; }
   .enti-chip { padding:4px 11px; border-radius:50rem; border:1px solid var(--border); background:#fff; color:var(--muted); font:inherit; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s ease-in-out; }
   .enti-chip:hover { border-color:var(--it-primary); color:var(--it-primary); }
@@ -539,6 +544,17 @@
     <div class="enti-toolbar">
       <span class="enti-filter-label">Filtra per problema:</span>
       <div class="enti-filter" id="entiFilter"></div>
+    </div>
+    <div class="enti-sort">
+      <label class="enti-sort-label" for="entiSortKey">Ordina per:</label>
+      <select id="entiSortKey">
+        <option value="priority">Priorità</option>
+        <option value="name">Nome ente</option>
+        <option value="software">Numero di software</option>
+        <option value="problems">Numero di problemi</option>
+        <option value="impact">Riuso totale</option>
+      </select>
+      <button type="button" id="entiSortDir" title="Cambia direzione" aria-label="Direzione ordinamento">▼</button>
     </div>
     <div id="enti-list"></div>
     <div id="enti-empty" class="empty" hidden>Nessun ente con i filtri selezionati.</div>
@@ -1281,7 +1297,16 @@ const ISSUE_TYPES = [
   ['no_contacts', 'senza contatti'],
   ['archived', 'archiviato'],
 ];
-const entiState = { types: new Set(), open: new Set() };
+const entiState = { types: new Set(), open: new Set(), sort: { k: "priority", asc: false } };
+
+// Funzioni di chiave per ciascun ordinamento disponibile nella vista enti.
+const ENTI_SORT_KEYS = {
+  priority: e => e.priority,
+  name:     e => (e.name || "").toLowerCase(),
+  software: e => e.software.length,
+  problems: e => e.problemCount,
+  impact:   e => e.impact,
+};
 
 // Interventi da richiedere (actionable) per un software, con peso per la priorità
 function softwareIssues(r) {
@@ -1320,7 +1345,7 @@ function buildEnti() {
     e.priority = Math.round(e.severity * (1 + Math.log1p(e.impact)));  // gravità × impatto
     e.problemCount = e.software.reduce((s, sw) => s + sw.issues.length, 0);
   }
-  enti.sort((a, b) => b.priority - a.priority || b.severity - a.severity || b.impact - a.impact);
+  // L'ordinamento avviene in renderEnti() in base a entiState.sort.
   return enti;
 }
 const ALL_ENTI = buildEnti();
@@ -1337,6 +1362,17 @@ function renderEnti() {
   const enti = ALL_ENTI
     .map(e => sel.size === 0 ? e : { ...e, software: e.software.filter(sw => sw.issues.some(i => sel.has(i.t))) })
     .filter(e => e.software.length > 0);
+  // Ordinamento: criterio scelto dall'utente; a parità, fallback su priorità desc per stabilità.
+  const sortFn = ENTI_SORT_KEYS[entiState.sort.k] || ENTI_SORT_KEYS.priority;
+  const asc = entiState.sort.asc;
+  enti.sort((a, b) => {
+    const av = sortFn(a), bv = sortFn(b);
+    let cmp;
+    if (typeof av === "string") cmp = asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    else cmp = asc ? av - bv : bv - av;
+    if (cmp) return cmp;
+    return b.priority - a.priority;  // tie-breaker stabile
+  });
   document.getElementById("enti-empty").hidden = enti.length > 0;
   document.getElementById("enti-list").innerHTML = enti.map(e => {
     const info = e.info;
@@ -1393,6 +1429,31 @@ function renderEnti() {
     b.classList.toggle("active");
     renderEnti();
   }));
+})();
+
+// Ordinamento: select per il criterio + piccolo bottone per la direzione.
+// Default: priorità desc; cambiando criterio si applica una direzione intuitiva
+// (nome asc, gli altri desc), che resta poi modificabile a piacere.
+(function () {
+  const sel = document.getElementById("entiSortKey");
+  const dir = document.getElementById("entiSortDir");
+  const refresh = () => {
+    sel.value = entiState.sort.k;
+    dir.textContent = entiState.sort.asc ? "▲" : "▼";
+    dir.title = entiState.sort.asc ? "Direzione: crescente — clicca per invertire" : "Direzione: decrescente — clicca per invertire";
+  };
+  sel.addEventListener("change", () => {
+    entiState.sort.k = sel.value;
+    entiState.sort.asc = (sel.value === "name");
+    refresh();
+    renderEnti();
+  });
+  dir.addEventListener("click", () => {
+    entiState.sort.asc = !entiState.sort.asc;
+    refresh();
+    renderEnti();
+  });
+  refresh();
 })();
 // clic: sul software apre il drawer; sull'intestazione espande/comprime la card
 document.getElementById("enti-list").addEventListener("click", e => {
