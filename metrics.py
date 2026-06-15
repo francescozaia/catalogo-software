@@ -782,13 +782,21 @@ def fetch_repo(url: str, since: datetime, now: datetime, window_days: int) -> di
 # ════════════════════════════════════════════════════════════════════════════
 
 def iter_catalog_repos(jsonl_path: Path):
-    """Itera gli URL repository dal catalogo (data/software.jsonl)."""
+    """Itera gli URL repository DISTINTI dal catalogo (data/software.jsonl).
+
+    Più schede catalogo possono dichiarare lo stesso repo upstream — es. Matomo
+    è pubblicato sia da `italia-software/matomo` sia da `RegioneER/publiccode-matomo`
+    ma il publiccode.yml di entrambe punta a `matomo-org/matomo`. Senza dedup
+    interrogheremmo la stessa API due volte ottenendo righe identiche in output.
+    """
+    seen: set[str] = set()
     with jsonl_path.open(encoding="utf-8") as f:
         for line in f:
             rec = json.loads(line)
             pc = rec.get("publiccode") or {}
             url = pc.get("url") or rec.get("url") or ""
-            if url:
+            if url and url not in seen:
+                seen.add(url)
                 yield url
 
 

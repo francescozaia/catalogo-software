@@ -29,14 +29,23 @@ TEMPLATE_PATH = Path(__file__).resolve().parent / "template.html"
 
 
 def load_catalog() -> dict[str, dict]:
+    """Carica data/software.jsonl indicizzato per id catalogo Developers Italia.
+
+    Si indicizza per `id` (UUID della scheda) e non per URL del repo perché più
+    schede catalogo possono dichiarare lo stesso repo upstream (es. Matomo è
+    pubblicato sia da italia-software sia da Regione ER, ed entrambe puntano a
+    `matomo-org/matomo`). Indicizzando per URL le due schede collidono e una
+    "scompare" dietro l'altra. La vista resta guidata dalle schede catalogo:
+    una riga in pannello per ogni scheda, anche se due schede condividono il
+    repo upstream (in quel caso le metriche saranno identiche).
+    """
     idx: dict[str, dict] = {}
     with CATALOG.open(encoding="utf-8") as f:
         for line in f:
             r = json.loads(line)
-            pc = r.get("publiccode") or {}
-            url = pc.get("url") or r.get("url") or ""
-            if url:
-                idx[url] = r
+            cid = r.get("id")
+            if cid:
+                idx[cid] = r
     return idx
 
 
@@ -199,11 +208,25 @@ def _people(lst, keys: list[str]) -> list[dict]:
 
 
 def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, dict]) -> list[dict]:
-    out = []
+    """Combina metriche e catalogo. Si itera sulle schede del catalogo (chiave:
+    id catalogo) e si recupera la metrica per URL del repo, perché due schede
+    possono condividere lo stesso repo upstream e iterando sulle metriche se ne
+    perderebbe una (vedi load_catalog). Le metriche sono indicizzate per URL e
+    quando due schede puntano allo stesso repo otterranno la stessa metrica.
+    """
+    metrics_by_url: dict[str, dict] = {}
     for m in metrics:
-        url = m.get("url", "")
-        cat = catalog.get(url, {})
+        u = m.get("url")
+        if u and u not in metrics_by_url:
+            metrics_by_url[u] = m
+
+    out = []
+    for cid, cat in catalog.items():
         pc = cat.get("publiccode") or {}
+        url = pc.get("url") or cat.get("url") or ""
+        if not url:
+            continue
+        m = metrics_by_url.get(url) or {"url": url, "error": "metrica non disponibile"}
         is_riuso, org_uri, codice_ipa = classify_reuse(pc)
         org = pc.get("organisation") if isinstance(pc.get("organisation"), dict) else {}
         maint = pc.get("maintenance") if isinstance(pc.get("maintenance"), dict) else {}
@@ -211,7 +234,7 @@ def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, 
         used_by = pc.get("usedBy") if isinstance(pc.get("usedBy"), list) else []
         desc = pc.get("description") or {}
         m2 = dict(m)
-        m2["catalog_id"] = cat.get("id") or ""
+        m2["catalog_id"] = cid
         m2["catalog_name"] = pc.get("name", "")
         m2["development_status"] = pc.get("developmentStatus", "")
         m2["release_date"] = pc.get("releaseDate", "")
@@ -233,7 +256,7 @@ def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, 
         m2["long_description"] = pick_localised(desc, "longDescription")
 
         # --- Stato di validazione publiccode.yml (da data/publiccode.jsonl) ---
-        pcrec = publiccode.get(cat.get("id")) if cat.get("id") else None
+        pcrec = publiccode.get(cid)
         msg = (pcrec or {}).get("message") or ""
         if pcrec is None or not pcrec.get("fetched", True) or not msg:
             m2["publiccode_severity"] = "unknown"
