@@ -93,7 +93,13 @@
   .help { display:inline; }
   .info-i { display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; margin-left:5px; padding:0; border:1px solid var(--it-primary); border-radius:50%; background:#fff; color:var(--it-primary); font-family:var(--font-serif); font-style:italic; font-weight:700; font-size:10px; line-height:1; cursor:pointer; vertical-align:middle; text-transform:none; }
   .info-i:hover, .info-i[aria-expanded="true"] { background:var(--it-primary); color:#fff; }
-  .popover-box { display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 8px 16px rgba(0,0,0,.15); padding:10px 12px; font-family:var(--font-sans); font-weight:400; font-size:12px; line-height:1.45; letter-spacing:normal; text-transform:none; color:var(--text); }
+  .popover-box { display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:60; background:#fff; border:1px solid var(--border); border-radius:4px; box-shadow:0 8px 16px rgba(0,0,0,.15); padding:10px 12px; font-family:var(--font-sans); font-weight:400; font-size:12px; line-height:1.45; letter-spacing:normal; text-transform:none; color:var(--text); text-align:left; }
+  /* Nel drawer (panel laterale): per evitare che il popover sfori il bordo
+     sinistro del drawer su etichette corte (icona vicina al bordo sinistro),
+     la posizione viene calcolata in JS con position:fixed e left/top in viewport.
+     Qui forniamo solo i vincoli di larghezza. */
+  #drawer .help { display:inline-block; }
+  #drawer .popover-box { min-width:230px; max-width:300px; box-sizing:border-box; }
   .popover-box.open { display:block; }
   .popover-box b { color:var(--it-primary); }
   .popover-box ul { margin:6px 0 0; padding-left:16px; }
@@ -177,7 +183,23 @@
   #drawer .desc { color:var(--it-dark); font-family:var(--font-serif); font-size:14px; font-style:italic; line-height:1.6; padding:10px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:16px; }
   #drawer .group dd.brk { word-break:break-word; font-family:var(--font-mono); font-size:11px; }
   #drawer .chars-d { display:flex; flex-wrap:wrap; align-items:baseline; gap:5px; margin-top:8px; }
-  #drawer .long-desc { font-size:13px; line-height:1.55; white-space:pre-wrap; color:var(--text); }
+  #drawer .long-desc { font-size:13px; line-height:1.55; color:var(--text); background:#f4f5f7; border:1px solid var(--border); border-radius:4px; padding:12px 14px; }
+  #drawer .long-desc > :first-child { margin-top:0; }
+  #drawer .long-desc > :last-child { margin-bottom:0; }
+  #drawer .long-desc h2, #drawer .long-desc h3, #drawer .long-desc h4 { font-family:var(--font-sans); font-weight:700; margin:14px 0 6px; }
+  #drawer .long-desc h2 { font-size:15px; }
+  #drawer .long-desc h3 { font-size:14px; }
+  #drawer .long-desc h4 { font-size:13px; }
+  #drawer .long-desc p { margin:0 0 8px; }
+  #drawer .long-desc ul, #drawer .long-desc ol { margin:6px 0 10px; padding-left:22px; }
+  #drawer .long-desc li { margin:3px 0; }
+  #drawer .long-desc a { color:var(--it-primary); text-decoration:underline; word-break:break-word; }
+  #drawer .long-desc code { background:#fff; border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-family:var(--font-mono); font-size:12px; }
+  #drawer .long-desc pre { background:#fff; border:1px solid var(--border); border-radius:4px; padding:10px 12px; overflow-x:auto; font-size:12px; line-height:1.45; margin:8px 0; }
+  #drawer .long-desc pre code { background:transparent; border:none; padding:0; }
+  #drawer .long-desc strong { font-weight:700; }
+  #drawer .long-desc em { font-style:italic; }
+  #drawer .long-desc blockquote { margin:8px 0; padding:4px 12px; border-left:3px solid var(--border); color:var(--muted); }
   #drawer .subgroup { margin-bottom:10px; }
   #drawer .subgroup-h { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:700; margin-bottom:4px; }
   #drawer .person { padding:5px 0; border-bottom:1px dotted var(--border); }
@@ -924,7 +946,7 @@ function rowHtml(r) {
   }
 
   const repoMetrics = r.error ? '' :
-    `repo · commit 90gg <b>${fmtNum(r.commits_in_window)}</b> · PR merged <b>${fmtNum(r.pr_merged_in_window)}</b> · lead time <b>${fmtNum(r.pr_median_lead_time_days)}</b> · review <b>${fmtPct(r.pr_review_coverage_pct)}</b> · issue aperte <b>${fmtNum(r.issues_open_now)}</b> · CI <b>${r.has_ci ? 'sì' : 'no'}</b>`;
+    `commit ultimi 90gg <b>${fmtNum(r.commits_in_window)}</b> (da <b>${fmtNum(r.commit_authors_in_window)}</b> autori) · PR mergiate <b>${fmtNum(r.pr_merged_in_window)}</b> · lead time <b>${fmtNum(r.pr_median_lead_time_days)}</b> · review <b>${fmtPct(r.pr_review_coverage_pct)}</b> · issue aperte <b>${fmtNum(r.issues_open_now)}</b> · CI <b>${r.has_ci ? 'sì' : 'no'}</b>`;
   const verPart = `versione publiccode.yml <b>${escapeHtml(r.publiccode_version || '—')}</b>`;
   const footLine = `<div class="rb-foot">${[repoMetrics, verPart].filter(Boolean).join(' · ')}</div>`;
 
@@ -954,6 +976,84 @@ function rowHtml(r) {
 
 function escapeHtml(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+// === Markdown minimale per il campo long_description del publiccode.yml ===
+// Supporta heading, grassetto/corsivo, codice inline e a blocchi, liste
+// puntate/numerate, link, blockquote, paragrafi. Niente librerie esterne perché
+// il pannello è un singolo file HTML autonomo.
+function renderMarkdown(text) {
+  if (!text) return "";
+  // 1) Tiriamo fuori i code-block fenced per non processarli con le altre regex.
+  const blocks = [];
+  let src = String(text).replace(/```([a-zA-Z0-9_+-]*)\n([\s\S]*?)```/g, (_, lang, code) => {
+    blocks.push(`<pre><code>${escapeHtml(code.replace(/\n$/, ""))}</code></pre>`);
+    return ` B${blocks.length - 1} `;
+  });
+  // 2) Escape HTML su tutto il resto.
+  src = escapeHtml(src);
+  // 3) Riconosciamo gli inline. L'ordine conta: code → bold → italic → link.
+  src = src.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);
+  src = src.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  src = src.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s)\.,;:!?]|$)/g, "$1<em>$2</em>");
+  src = src.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
+    const safe = /^(https?:|mailto:)/i.test(url) ? url : "#";
+    return `<a href="${safe}" target="_blank" rel="noopener">${label}</a>`;
+  });
+  // 4) Costruzione block-level riga per riga.
+  const lines = src.split(/\r?\n/);
+  const out = [];
+  let i = 0;
+  function flushList(kind, items) {
+    out.push(`<${kind}>` + items.map(x => `<li>${x}</li>`).join("") + `</${kind}>`);
+  }
+  while (i < lines.length) {
+    const line = lines[i];
+    // Marker di code-block fenced ripristinato dopo
+    const m = /^ B(\d+) $/.exec(line.trim());
+    if (m) { out.push(blocks[+m[1]]); i++; continue; }
+    if (!line.trim()) { i++; continue; }
+    let h = /^(#{1,4})\s+(.*)$/.exec(line);
+    if (h) {
+      const level = Math.min(h[1].length + 1, 4); // # → h2, ## → h3, ### → h4, #### → h4
+      out.push(`<h${level}>${h[2].trim()}</h${level}>`);
+      i++; continue;
+    }
+    // Nota: a questo punto del flusso il `>` originario è già stato escapato a &gt;.
+    if (/^&gt;\s?/.test(line)) {
+      const buf = [];
+      while (i < lines.length && /^&gt;\s?/.test(lines[i])) { buf.push(lines[i].replace(/^&gt;\s?/, "")); i++; }
+      out.push(`<blockquote>${buf.join(" ")}</blockquote>`);
+      continue;
+    }
+    if (/^\s*[-*+]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*[-*+]\s+/, ""));
+        i++;
+      }
+      flushList("ul", items);
+      continue;
+    }
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\s*\d+\.\s+/, ""));
+        i++;
+      }
+      flushList("ol", items);
+      continue;
+    }
+    // Paragrafo: raccoglie fino a riga vuota o nuovo blocco
+    const buf = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() &&
+           !/^(#{1,4}\s|&gt;|\s*[-*+]\s|\s*\d+\.\s| B\d+ $)/.test(lines[i])) {
+      buf.push(lines[i]); i++;
+    }
+    out.push(`<p>${buf.join("<br>")}</p>`);
+  }
+  return out.join("");
+}
+
 // === Drawer ===
 function personLine(p) {
   const bits = [];
@@ -976,6 +1076,11 @@ function usedByBlock(r) {
   return `<div class="group"><h4>Riutilizzato da (${r.used_by_count})</h4><ul class="usedby">${items}</ul>${trunc}</div>`;
 }
 function charBlockD(label, arr) { return charBlock(label, arr) ? `<div class="chars-d">${charBlock(label, arr)}</div>` : ''; }
+
+// Tooltip informativo riusabile (pulsantino "i" col popover, stile filtri).
+function ttip(text) {
+  return ` <span class="help"><button type="button" class="info-i" aria-expanded="false" aria-label="Informazioni">i</button><span class="popover-box" role="tooltip">${text}</span></span>`;
+}
 
 function openDrawer(url) {
   const r = DATA.find(x => x.url === url);
@@ -1033,17 +1138,17 @@ function openDrawer(url) {
       ${charBlockD('Audience', r.audience_scope)}
       ${r.catalog_id ? `<div class="cat-link"><a href="https://developers.italia.it/it/software/${escapeHtml(r.catalog_id)}" target="_blank" rel="noopener">Apri scheda nel catalogo ↗</a></div>` : ''}
     </div>
-    ${r.long_description ? `<div class="group"><h4>Descrizione</h4><div class="long-desc">${escapeHtml(r.long_description)}</div></div>` : ''}
+    ${r.long_description ? `<div class="group"><h4>Descrizione</h4><div class="long-desc">${renderMarkdown(r.long_description)}</div></div>` : ''}
     ${(r.contractors && r.contractors.length) || (r.contacts && r.contacts.length) ? `<div class="group"><h4>Manutentori</h4>${peopleBlock('Contraenti', r.contractors)}${peopleBlock('Contatti', r.contacts)}</div>` : ''}
     ${usedByBlock(r)}
     <div class="group">
       <h4>Score composito (peso applicato)</h4>
       <dl>
-        <dt>Totale</dt><dd style="color:${color(r.score)};font-weight:600">${r.score}</dd>
-        <dt>Freshness (peso ${w.f})</dt><dd>${fr}</dd>
-        <dt>Velocity (peso ${w.v})</dt><dd>${vl}</dd>
-        <dt>Quality (peso ${w.q})</dt><dd>${ql}</dd>
-        <dt>Maintenance (peso ${w.m})</dt><dd>${mt}</dd>
+        <dt>Totale${ttip("Score composito 0–100. Media pesata dei quattro sub-score con i pesi impostati dagli slider nella sidebar.")}</dt><dd style="color:${color(r.score)};font-weight:600">${r.score}</dd>
+        <dt>Freshness (peso ${w.f} su 100)${ttip("Quanto è recente l'ultima attività sul branch di default. 100 = commit nelle ultime 2 settimane; 0 = nessun commit da oltre 1 anno o repo archiviato.")}</dt><dd>${fr}</dd>
+        <dt>Velocity (peso ${w.v} su 100)${ttip("Velocità di consegna. Combina volume di commit (60%) e lead time mediano delle PR mergiate (40%).")}</dt><dd>${vl}</dd>
+        <dt>Quality (peso ${w.q} su 100)${ttip("Qualità del processo. Combina copertura review (40%), presenza CI (30%) e bus factor (30%).")}</dt><dd>${ql}</dd>
+        <dt>Maintenance (peso ${w.m} su 100)${ttip("Manutenzione attiva. Combina età della issue aperta più vecchia, tasso di chiusura issue, freschezza delle dipendenze e recency dell'ultima release (25% ciascuno).")}</dt><dd>${mt}</dd>
       </dl>
     </div>
     <div class="group">
@@ -1061,9 +1166,9 @@ function openDrawer(url) {
       <h4>Attività commit (90gg)</h4>
       <dl>
         <dt>Commit</dt><dd>${fmtNum(r.commits_in_window)}</dd>
-        <dt>Giorni attivi</dt><dd>${fmtNum(r.active_days_in_window)}</dd>
+        <dt>Giorni attivi${ttip("Numero di giorni distinti con almeno un commit, nella finestra di 90 giorni.")}</dt><dd>${fmtNum(r.active_days_in_window)}</dd>
         <dt>Autori</dt><dd>${fmtNum(r.commit_authors_in_window)}</dd>
-        <dt>Bus factor top-1</dt><dd>${fmtPct(r.bus_factor_top1_pct)}</dd>
+        <dt>Bus factor top-1${ttip("Percentuale di commit dell'autore più prolifico nella finestra. Valori alti indicano forte dipendenza da una sola persona: se quell'autore si ferma, il progetto rischia di restare scoperto.")}</dt><dd>${fmtPct(r.bus_factor_top1_pct)}</dd>
         <dt>Ultimo commit</dt><dd>${fmtDate(r.last_commit_date)}</dd>
       </dl>
     </div>
@@ -1072,9 +1177,9 @@ function openDrawer(url) {
       <dl>
         <dt>PR aperte</dt><dd>${fmtNum(r.pr_total_in_window)}</dd>
         <dt>PR mergeate</dt><dd>${fmtNum(r.pr_merged_in_window)}</dd>
-        <dt>Lead time mediano (g)</dt><dd>${fmtNum(r.pr_median_lead_time_days)}</dd>
-        <dt>Lead time p90 (g)</dt><dd>${fmtNum(r.pr_p90_lead_time_days)}</dd>
-        <dt>Review coverage</dt><dd>${fmtPct(r.pr_review_coverage_pct)}</dd>
+        <dt>Lead time mediano (g)${ttip("Tempo (in giorni) tra apertura e merge di una PR — valore mediano tra le PR mergiate negli ultimi 90 giorni.")}</dt><dd>${fmtNum(r.pr_median_lead_time_days)}</dd>
+        <dt>Lead time p90 (g)${ttip("90° percentile del lead time: il 90% delle PR è stato mergiato in questo numero di giorni o meno. Misura la coda lunga, oltre la mediana.")}</dt><dd>${fmtNum(r.pr_p90_lead_time_days)}</dd>
+        <dt>Review coverage${ttip("Percentuale delle PR mergiate negli ultimi 90 giorni che hanno ricevuto almeno una review o un commento di revisione prima del merge.")}</dt><dd>${fmtPct(r.pr_review_coverage_pct)}</dd>
         <dt>Autori distinti</dt><dd>${fmtNum(r.pr_distinct_authors_in_window)}</dd>
       </dl>
     </div>
@@ -1082,17 +1187,17 @@ function openDrawer(url) {
       <h4>Issue</h4>
       <dl>
         <dt>Aperte ora</dt><dd>${fmtNum(r.issues_open_now)}</dd>
-        <dt>Più vecchia aperta</dt><dd>${fmtDays(num(r.oldest_open_issue_days))}</dd>
+        <dt>Più vecchia aperta${ttip("Età (in giorni) della issue aperta più vecchia. Misura il backlog persistente: valori alti indicano segnalazioni mai risolte da molto tempo.")}</dt><dd>${fmtDays(num(r.oldest_open_issue_days))}</dd>
         <dt>Aperte (90gg)</dt><dd>${fmtNum(r.issues_opened_in_window)}</dd>
         <dt>Chiuse (90gg)</dt><dd>${fmtNum(r.issues_closed_in_window)}</dd>
-        <dt>Tasso chiusura</dt><dd>${fmtPct(r.issue_close_ratio_pct)}</dd>
-        <dt>Tempo chiusura mediano</dt><dd>${fmtNum(r.median_issue_close_time_days)} g</dd>
+        <dt>Tasso chiusura${ttip("Issue chiuse negli ultimi 90 giorni in rapporto a quelle aperte nello stesso periodo. Sopra 100% riduce il backlog, sotto 100% lo fa crescere.")}</dt><dd>${fmtPct(r.issue_close_ratio_pct)}</dd>
+        <dt>Tempo chiusura mediano${ttip("Tempo mediano (in giorni) tra apertura e chiusura per le issue chiuse nella finestra di 90 giorni.")}</dt><dd>${fmtNum(r.median_issue_close_time_days)} g</dd>
       </dl>
     </div>
     <div class="group">
       <h4>Dipendenze e CI</h4>
       <dl>
-        <dt>PR Dependabot (90gg)</dt><dd>${fmtNum(r.dependabot_pr_in_window)}</dd>
+        <dt>PR Dependabot (90gg)${ttip("PR automatiche di aggiornamento delle dipendenze ricevute nella finestra, generate da bot di sicurezza (Dependabot, Renovate e simili).")}</dt><dd>${fmtNum(r.dependabot_pr_in_window)}</dd>
         <dt>File dipendenze</dt><dd>${escapeHtml(r.dependency_files || '—')}</dd>
         <dt>CI</dt><dd>${r.has_ci ? 'sì' : 'no'}</dd>
         <dt>Release totali</dt><dd>${fmtNum(r.releases_total)}</dd>
@@ -1166,20 +1271,94 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(
 
 // === Popover informativi (stile Bootstrap Italia) ===
 function closePopovers() {
-  document.querySelectorAll(".popover-box.open").forEach(p => p.classList.remove("open"));
+  document.querySelectorAll(".popover-box.open").forEach(p => {
+    p.classList.remove("open");
+    // Reset eventuali stili inline applicati dal positioning del drawer
+    p.style.position = ""; p.style.top = ""; p.style.left = ""; p.style.right = "";
+    p.style.width = ""; p.style.maxWidth = ""; p.style.minWidth = "";
+    // Ripristino del genitore originale (vedi positionDrawerPopover sotto)
+    if (p._origParent) {
+      if (p._origNext && p._origNext.parentNode === p._origParent) {
+        p._origParent.insertBefore(p, p._origNext);
+      } else {
+        p._origParent.appendChild(p);
+      }
+      p._origParent = null; p._origNext = null;
+    }
+  });
   document.querySelectorAll('.info-i[aria-expanded="true"]').forEach(b => b.setAttribute("aria-expanded", "false"));
 }
-document.querySelectorAll(".info-i").forEach(btn => btn.addEventListener("click", e => {
-  e.stopPropagation();
-  const pop = btn.nextElementSibling;        // lo .popover-box adiacente
-  const wasOpen = pop.classList.contains("open");
-  closePopovers();
-  if (!wasOpen) { pop.classList.add("open"); btn.setAttribute("aria-expanded", "true"); }
-}));
-// click dentro al popover: non chiudere (permette di leggere/selezionare)
-document.querySelectorAll(".popover-box").forEach(p => p.addEventListener("click", e => e.stopPropagation()));
-// click fuori o Escape: chiudi
-document.addEventListener("click", closePopovers);
+// Nel drawer le icone "i" possono trovarsi sia a sinistra che a destra del pannello:
+// l'ancoraggio CSS statico finirebbe per tagliare il popover su uno dei due lati.
+// Inoltre `#drawer` ha `transform: translateX(...)` (per lo slide), e in CSS un
+// elemento con `transform` diventa containing block ANCHE per i discendenti
+// `position:fixed`. Risultato: un popover fixed dentro al drawer sarebbe
+// posizionato rispetto al drawer (non al viewport) e ritagliato dal suo overflow.
+// Per evitarlo, lo ri-parentiamo temporaneamente sotto <body>: così le coordinate
+// fixed sono davvero viewport-relative e il popover non viene mai clippato.
+function positionDrawerPopover(btn, pop) {
+  const drawer = document.getElementById("drawer");
+  if (!drawer) return;
+  if (pop.parentNode !== document.body) {
+    pop._origParent = pop.parentNode;
+    pop._origNext = pop.nextSibling;
+    document.body.appendChild(pop);
+  }
+  const dr = drawer.getBoundingClientRect();
+  const br = btn.getBoundingClientRect();
+  const W = 280, margin = 12;
+  pop.style.position = "fixed";
+  pop.style.maxWidth = W + "px";
+  pop.style.minWidth = "230px";
+  pop.style.width = "";
+  pop.style.right = "auto";
+  pop.style.top = (br.bottom + 6) + "px";
+  // Misuro la larghezza naturale dopo aver applicato il max-width
+  pop.style.left = "0px";
+  const popW = Math.min(pop.offsetWidth || W, W);
+  // Anchor preferito: lato destro del popover allineato al lato destro dell'icona
+  let left = br.right - popW;
+  // Clamp dentro al drawer (con margine), non oltre il viewport
+  const minLeft = Math.max(dr.left + margin, margin);
+  const maxLeft = Math.min(dr.right - margin, window.innerWidth - margin) - popW;
+  if (left < minLeft) left = minLeft;
+  if (left > maxLeft) left = maxLeft;
+  pop.style.left = left + "px";
+}
+// Gestione popover via event delegation (così funzionano anche i tooltip
+// creati dinamicamente nel drawer di dettaglio, non solo quelli statici nella
+// sidebar dei filtri).
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".info-i");
+  if (btn) {
+    // Cache del riferimento al popover sul bottone: serve quando il popover
+    // viene ri-parentato sotto <body> (vedi positionDrawerPopover) e quindi
+    // non è più `btn.nextElementSibling`.
+    if (!btn._pop || !btn._pop.classList.contains("popover-box")) {
+      btn._pop = btn.nextElementSibling;
+    }
+    const pop = btn._pop;
+    if (!pop || !pop.classList.contains("popover-box")) return;
+    const wasOpen = pop.classList.contains("open");
+    closePopovers();
+    if (!wasOpen) {
+      pop.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      if (btn.closest("#drawer") || pop._origParent) positionDrawerPopover(btn, pop);
+    }
+    return;
+  }
+  if (e.target.closest(".popover-box")) return;  // click dentro popover: non chiudere
+  closePopovers();  // click fuori
+});
+// Lo scroll del drawer o della finestra desincronizzerebbe il popover (è in fixed):
+// più semplice chiuderlo.
+(function attachDrawerScrollClose() {
+  const d = document.getElementById("drawer");
+  if (d) d.addEventListener("scroll", closePopovers);
+  window.addEventListener("scroll", closePopovers, true);
+  window.addEventListener("resize", closePopovers);
+})();
 document.addEventListener("click", closeAllMs);
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closePopovers(); closeAllMs(); } });
 
