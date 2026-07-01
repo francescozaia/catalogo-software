@@ -1,14 +1,26 @@
-"""Arricchisce gli enti del catalogo con i contatti ufficiali da IndicePA.
+"""Arricchisce gli enti del catalogo con anagrafica e territorio da IndicePA/ISTAT.
 
-Per la vista «Analisi per ente» servono i recapiti reali dell'amministrazione
-(non quelli del fornitore nel publiccode). Questo script scarica il dataset
-pubblico `amministrazioni` di IndicePA (indicepa.gov.it) — un file TSV con
-~23.000 amministrazioni — e, per ogni codice IPA presente nel catalogo
-(data/software.jsonl), estrae denominazione, responsabile, regione, tipologia,
-sito istituzionale e PEC (domicilio digitale).
+Per la vista «Analisi per ente» servono i dati reali dell'amministrazione (non
+quelli del fornitore nel publiccode): contatti ufficiali, **categoria** di
+appartenenza IndicePA e **regione** di competenza territoriale.
 
-Produce data/indicepa.jsonl: un record per codice IPA trovato, indicizzabile
-per `codice_ipa`.
+Lo script lavora su tre dataset pubblici salvati in `data/` (non versionati,
+aggiornabili a mano dalle fonti ufficiali):
+
+  - `data/enti.csv`      anagrafica IndicePA di ~23.000 amministrazioni, con
+                         codice IPA, denominazione, responsabile, tipologia,
+                         PEC/email, sito, **Codice_Categoria** e
+                         **Codice_catastale_comune** (fonte: IndicePA opendata).
+  - `data/categorie.csv` vocabolario IndicePA delle categorie di ente
+                         (Codice_categoria → Nome_categoria).
+  - `data/comuni.csv`    elenco ISTAT dei comuni (delimitatore `;`), che mappa
+                         il codice catastale del comune alla **regione** e alla
+                         ripartizione geografica.
+
+Per ogni codice IPA presente nel catalogo (data/software.jsonl) unisce le tre
+fonti e scrive `data/indicepa.jsonl`: un record per codice IPA, indicizzabile
+per `codice_ipa`. La regione è ricavata dal comune di sede via codice catastale
+(fonte ISTAT), così da essere coerente con il filtro territoriale del pannello.
 
 Uso:
     python3 indicepa.py
@@ -19,15 +31,9 @@ from __future__ import annotations
 
 import argparse
 import csv
-import io
 import json
 import sys
 from pathlib import Path
-
-import requests
-
-CKAN = "https://indicepa.gov.it/ipa-dati/api/3/action"
-USER_AGENT = "catalogo-software-crawler/1.0 (+https://developers.italia.it)"
 
 
 def codice_ipa_of(pc: dict) -> str | None:
@@ -58,25 +64,42 @@ def catalog_ipa_codes(jsonl_path: Path) -> set[str]:
     return codes
 
 
-def resolve_amministrazioni_url(session: requests.Session) -> str:
-    """Ricava l'URL corrente del file amministrazioni.txt via API CKAN."""
-    r = session.get(f"{CKAN}/package_show", params={"id": "amministrazioni"}, timeout=30)
-    r.raise_for_status()
-    resources = r.json()["result"]["resources"]
-    for res in resources:
-        if (res.get("format") or "").upper() == "TXT" and res.get("url"):
-            return res["url"]
-    raise RuntimeError("IndicePA: risorsa amministrazioni.txt non trovata")
+def _clean(v: str | None) -> str:
+    """Normalizza un valore CSV: strip e scarta i placeholder 'null'."""
+    s = (v or "").strip()
+    return "" if s.lower() == "null" else s
+
+
+def load_categorie(path: Path) -> dict[str, str]:
+    """Mappa Codice_categoria → Nome_categoria (vocabolario IndicePA)."""
+    idx: dict[str, str] = {}
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            code = _clean(row.get("Codice_categoria"))
+            if code:
+                idx[code] = _clean(row.get("Nome_categoria"))
+    return idx
+
+
+def load_comuni(path: Path) -> dict[str, dict]:
+    """Mappa Codice catasto (maiuscolo) → riga comune ISTAT (delimitatore ';')."""
+    idx: dict[str, dict] = {}
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f, delimiter=";"):
+            code = _clean(row.get("Codice catasto")).upper()
+            if code:
+                idx[code] = row
+    return idx
 
 
 def parse_pec_and_mails(row: dict) -> tuple[str, list[dict]]:
-    """Estrae la PEC (primo domicilio digitale) e tutte le email dalla riga."""
+    """Estrae la PEC (primo domicilio digitale) e tutte le email dalla riga enti.csv."""
     pec = ""
     mails: list[dict] = []
     for i in range(1, 6):
-        addr = (row.get(f"mail{i}") or "").strip()
-        tipo = (row.get(f"tipo_mail{i}") or "").strip()
-        if not addr or addr.lower() == "null":
+        addr = _clean(row.get(f"Mail{i}"))
+        tipo = _clean(row.get(f"Tipo_Mail{i}"))
+        if not addr:
             continue
         mails.append({"mail": addr, "tipo": tipo})
         if tipo.lower() == "pec" and not pec:
@@ -84,48 +107,79 @@ def parse_pec_and_mails(row: dict) -> tuple[str, list[dict]]:
     return pec, mails
 
 
+def build_record(row: dict, categorie: dict[str, str], comuni: dict[str, dict]) -> dict:
+    """Costruisce il record arricchito per un ente a partire dalla riga enti.csv."""
+    pec, mails = parse_pec_and_mails(row)
+    cod = _clean(row.get("Codice_IPA"))
+
+    cat_code = _clean(row.get("Codice_Categoria"))
+    categoria = categorie.get(cat_code, "")
+
+    catasto = _clean(row.get("Codice_catastale_comune")).upper()
+    comune_row = comuni.get(catasto, {})
+    comune = _clean(comune_row.get("Comune"))
+    provincia = _clean(comune_row.get("Provincia/Uts"))
+    regione = _clean(comune_row.get("Regione"))
+    ripartizione = _clean(comune_row.get("Ripartizione geografica"))
+
+    responsabile = " ".join(x for x in [
+        _clean(row.get("Titolo_responsabile")),
+        _clean(row.get("Nome_responsabile")),
+        _clean(row.get("Cognome_responsabile")),
+    ] if x).strip()
+
+    return {
+        "codice_ipa": cod,
+        "denominazione": _clean(row.get("Denominazione_ente")),
+        "responsabile": responsabile,
+        "comune": comune,
+        "provincia": provincia,
+        "regione": regione,
+        "ripartizione": ripartizione,
+        "tipologia": _clean(row.get("Tipologia")),
+        "categoria_codice": cat_code,
+        "categoria": categoria,
+        "sito": _clean(row.get("Sito_istituzionale")),
+        "pec": pec,
+        "mails": mails,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Arricchimento enti da IndicePA")
+    p = argparse.ArgumentParser(description="Arricchimento enti da IndicePA/ISTAT (fonti locali)")
     p.add_argument("--input", default="data/software.jsonl", help="catalogo JSONL")
     p.add_argument("--out", default="data/indicepa.jsonl", help="output JSONL per codice IPA")
+    p.add_argument("--enti", default="data/enti.csv", help="anagrafica IndicePA (CSV)")
+    p.add_argument("--categorie", default="data/categorie.csv", help="vocabolario categorie IndicePA (CSV)")
+    p.add_argument("--comuni", default="data/comuni.csv", help="comuni ISTAT (CSV, delimitatore ';')")
     args = p.parse_args(argv)
+
+    for label, path in [("enti", args.enti), ("categorie", args.categorie), ("comuni", args.comuni)]:
+        if not Path(path).exists():
+            print(f"ERRORE: file {label} non trovato: {path}", file=sys.stderr)
+            return 1
 
     codes = catalog_ipa_codes(Path(args.input))
     print(f"Codici IPA da arricchire: {len(codes)}")
 
-    session = requests.Session()
-    session.headers.update({"User-Agent": USER_AGENT})
-
-    url = resolve_amministrazioni_url(session)
-    print(f"Scarico amministrazioni.txt …")
-    resp = session.get(url, timeout=120)
-    resp.raise_for_status()
-    # TSV con BOM iniziale
-    text = resp.content.decode("utf-8-sig", errors="replace")
-    reader = csv.DictReader(io.StringIO(text), delimiter="\t")
+    categorie = load_categorie(Path(args.categorie))
+    comuni = load_comuni(Path(args.comuni))
+    print(f"Categorie IndicePA: {len(categorie)} · Comuni ISTAT: {len(comuni)}")
 
     found: dict[str, dict] = {}
-    for row in reader:
-        cod = (row.get("cod_amm") or "").strip()
-        if not cod or cod.lower() not in codes:
-            continue
-        pec, mails = parse_pec_and_mails(row)
-        found[cod.lower()] = {
-            "codice_ipa": cod,
-            "denominazione": (row.get("des_amm") or "").strip(),
-            "responsabile": " ".join(x for x in [
-                (row.get("titolo_resp") or "").strip(),
-                (row.get("nome_resp") or "").strip(),
-                (row.get("cogn_resp") or "").strip(),
-            ] if x and x.lower() != "null").strip(),
-            "comune": (row.get("Comune") or "").strip(),
-            "provincia": (row.get("Provincia") or "").strip(),
-            "regione": (row.get("Regione") or "").strip(),
-            "tipologia": (row.get("tipologia_amm") or "").strip(),
-            "sito": (row.get("sito_istituzionale") or "").strip(),
-            "pec": pec,
-            "mails": mails,
-        }
+    missing_region: list[str] = []
+    missing_categoria: list[str] = []
+    with Path(args.enti).open(encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            cod = _clean(row.get("Codice_IPA"))
+            if not cod or cod.lower() not in codes:
+                continue
+            rec = build_record(row, categorie, comuni)
+            found[cod.lower()] = rec
+            if not rec["regione"]:
+                missing_region.append(cod)
+            if not rec["categoria"]:
+                missing_categoria.append(cod)
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,9 +188,13 @@ def main(argv: list[str] | None = None) -> int:
             jf.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
     missing = sorted(codes - set(found))
-    print(f"Trovati in IndicePA: {len(found)}/{len(codes)}")
+    print(f"Trovati in enti.csv: {len(found)}/{len(codes)}")
     if missing:
         print(f"Non trovati ({len(missing)}): {', '.join(missing[:20])}{' …' if len(missing) > 20 else ''}")
+    if missing_region:
+        print(f"Senza regione ({len(missing_region)}): {', '.join(missing_region[:20])}")
+    if missing_categoria:
+        print(f"Senza categoria ({len(missing_categoria)}): {', '.join(missing_categoria[:20])}")
     print(f"Scritto {out_path}")
     return 0
 

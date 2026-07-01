@@ -262,6 +262,8 @@
   .enti-wrap h2 { font-size:24px; font-weight:700; margin:0 0 8px; }
   .enti-wrap p.lead { font-family:var(--font-serif); font-style:italic; font-size:15px; color:var(--it-dark); line-height:1.6; margin-bottom:18px; }
   .enti-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .enti-facets { display:flex; flex-wrap:wrap; gap:16px; margin-bottom:14px; }
+  .enti-facet { display:flex; flex-direction:column; gap:5px; min-width:260px; flex:1 1 260px; max-width:360px; }
   .enti-filter-label, .enti-sort-label { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; }
   .enti-sort { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
   .enti-sort select { padding:6px 10px; background:#fff; color:var(--text); border:1px solid var(--border); border-radius:4px; font:inherit; font-size:13px; cursor:pointer; }
@@ -567,6 +569,16 @@
       <span class="enti-filter-label">Filtra per problema:</span>
       <div class="enti-filter" id="entiFilter"></div>
     </div>
+    <div class="enti-facets">
+      <div class="enti-facet">
+        <span class="enti-filter-label">Regione</span>
+        <div class="ms" id="ms-enti-reg"></div>
+      </div>
+      <div class="enti-facet">
+        <span class="enti-filter-label">Categoria ente</span>
+        <div class="ms" id="ms-enti-cat"></div>
+      </div>
+    </div>
     <div class="enti-sort">
       <label class="enti-sort-label" for="entiSortKey">Ordina per:</label>
       <select id="entiSortKey">
@@ -760,7 +772,8 @@ function closeAllMs() {
     if (t) t.setAttribute("aria-expanded", "false");
   });
 }
-function initMultiSelect(containerId, values, sel, allLabel) {
+function initMultiSelect(containerId, values, sel, allLabel, onChange) {
+  const apply = onChange || render;  // vista principale usa render(); la vista enti passa renderEnti
   const c = document.getElementById(containerId);
   c.innerHTML = `
     <button type="button" class="ms-toggle" aria-expanded="false">${allLabel}</button>
@@ -789,12 +802,12 @@ function initMultiSelect(containerId, values, sel, allLabel) {
   });
   panel.querySelectorAll(".ms-opt input").forEach(cb => cb.addEventListener("change", () => {
     if (cb.checked) sel.add(cb.value); else sel.delete(cb.value);
-    updateLabel(); render();
+    updateLabel(); apply();
   }));
   c.querySelector(".ms-clear").addEventListener("click", () => {
     sel.clear();
     panel.querySelectorAll(".ms-opt input").forEach(cb => cb.checked = false);
-    updateLabel(); render();
+    updateLabel(); apply();
   });
   c._reset = () => {
     sel.clear();
@@ -1476,7 +1489,7 @@ const ISSUE_TYPES = [
   ['no_contacts', 'senza contatti'],
   ['archived', 'archiviato'],
 ];
-const entiState = { types: new Set(), open: new Set(), sort: { k: "priority", asc: false } };
+const entiState = { types: new Set(), regioni: new Set(), categorie: new Set(), open: new Set(), sort: { k: "priority", asc: false } };
 
 // Funzioni di chiave per ciascun ordinamento disponibile nella vista enti.
 const ENTI_SORT_KEYS = {
@@ -1521,6 +1534,9 @@ function buildEnti() {
   const enti = [...map.values()];
   for (const e of enti) {
     e.name = (e.info && e.info.denominazione) || e.software[0].r.organisation_name || `IPA ${e.ipa}`;
+    // Territorio/categoria da IndicePA (data/indicepa.jsonl) per i filtri e le etichette.
+    e.regione = (e.info && e.info.regione) || "";
+    e.categoria = (e.info && e.info.categoria) || "";
     e.priority = Math.round(e.severity * (1 + Math.log1p(e.impact)));  // gravità × impatto
     e.problemCount = e.software.reduce((s, sw) => s + sw.issues.length, 0);
   }
@@ -1538,7 +1554,14 @@ function swContactsHtml(sw) {
 
 function renderEnti() {
   const sel = entiState.types;
+  const regs = entiState.regioni, cats = entiState.categorie;
   const enti = ALL_ENTI
+    // Filtri di ente (regione, categoria): scelta multipla in OR dentro ogni
+    // facet, in AND fra le due. Un ente senza regione/categoria (non in IndicePA)
+    // resta escluso quando il rispettivo filtro è attivo.
+    .filter(e => regs.size === 0 || regs.has(e.regione))
+    .filter(e => cats.size === 0 || cats.has(e.categoria))
+    // Filtro per tipologia di problema: agisce sui singoli software dell'ente.
     .map(e => sel.size === 0 ? e : { ...e, software: e.software.filter(sw => sw.issues.some(i => sel.has(i.t))) })
     .filter(e => e.software.length > 0);
   // Ordinamento: criterio scelto dall'utente; a parità, fallback su priorità desc per stabilità.
@@ -1581,7 +1604,7 @@ function renderEnti() {
           <span class="ente-caret" aria-hidden="true">▸</span>
           <span class="ente-name">${escapeHtml(e.name)}</span>
           <span class="badge riuso">IPA:${escapeHtml(e.ipa)}</span>
-          ${info && info.tipologia ? `<span class="ente-tip">${escapeHtml(info.tipologia)}${info.regione ? ' · ' + escapeHtml(info.regione) : ''}</span>` : ''}
+          ${(e.categoria || e.regione) ? `<span class="ente-tip">${[e.categoria, e.regione].filter(Boolean).map(escapeHtml).join(' · ')}</span>` : ''}
         </div>
         <div class="ente-head-stats">
           <span><b>${e.software.length}</b> software</span>
@@ -1609,6 +1632,12 @@ function renderEnti() {
     renderEnti();
   }));
 })();
+
+// Filtri territoriali/categoria: opzioni dai soli enti presenti nel catalogo.
+const entiRegioni = [...new Set(ALL_ENTI.map(e => e.regione).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+const entiCategorie = [...new Set(ALL_ENTI.map(e => e.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+initMultiSelect("ms-enti-reg", entiRegioni, entiState.regioni, "Tutte", renderEnti);
+initMultiSelect("ms-enti-cat", entiCategorie, entiState.categorie, "Tutte", renderEnti);
 
 // Ordinamento: select per il criterio + piccolo bottone per la direzione.
 // Default: priorità desc; cambiando criterio si applica una direzione intuitiva

@@ -28,7 +28,7 @@ I risultati confluiscono in un pannello HTML interattivo.
 python3 crawler.py           # legge le API di Developers Italia → data/software.{jsonl,csv}   (~1 min)
 python3 metrics.py           # interroga i repository (GitHub/GitLab/Bitbucket) → data/metrics.{jsonl,csv}  (~15 min)
 python3 publiccode_status.py # stato di validazione del publiccode.yml → data/publiccode.jsonl  (~9 min)
-python3 indicepa.py          # contatti ufficiali degli enti (PEC, ecc.) da IndicePA → data/indicepa.jsonl  (~5 s)
+python3 indicepa.py          # anagrafica enti (contatti, categoria, regione) da fonti locali → data/indicepa.jsonl  (~1 s)
 python3 taxonomies.py        # totali dei vocabolari publiccode.yml → data/taxonomies.json  (~1 s)
 python3 build_dashboard.py   # unisce template.html + data/ → docs/index.html
 ```
@@ -42,7 +42,7 @@ Il pannello è un singolo file HTML autonomo: per vederlo in locale basta aprire
 crawler.py           estrazione del catalogo dall'API ufficiale
 metrics.py           metriche di salute dei repository (multi-provider)
 publiccode_status.py stato di validazione del publiccode.yml (API log Developers Italia)
-indicepa.py          contatti ufficiali degli enti da IndicePA (per la vista "Analisi per ente")
+indicepa.py          anagrafica enti da IndicePA/ISTAT (contatti, categoria, regione) per la vista "Analisi per ente"
 taxonomies.py        totali dei vocabolari publiccode.yml (per la vista "Infografiche")
 build_dashboard.py   generazione del pannello
 template.html        markup del pannello (HTML/CSS/JS) con segnaposto __DATA__/__INFO__
@@ -50,6 +50,24 @@ requirements.txt     dipendenze Python
 data/                dati generati dagli script (rigenerabili, ignorati da git)
 docs/index.html      pannello pubblicato via GitHub Pages
 ```
+
+### File sorgente per `indicepa.py`
+
+`indicepa.py` non scarica più il dataset dalla rete: legge tre file di origine
+pubblica da tenere in `data/` (non versionati, aggiornabili a mano):
+
+- `data/enti.csv`      anagrafica IndicePA delle amministrazioni (codice IPA,
+                       denominazione, responsabile, tipologia, PEC/email, sito,
+                       `Codice_Categoria`, `Codice_catastale_comune`) — da
+                       [IndicePA opendata](https://indicepa.gov.it/ipa-dati/dataset).
+- `data/categorie.csv` vocabolario IndicePA delle categorie di ente
+                       (`Codice_categoria` → `Nome_categoria`).
+- `data/comuni.csv`    elenco ISTAT dei comuni (delimitatore `;`), che mappa il
+                       codice catastale del comune a regione e ripartizione
+                       geografica — da [ISTAT codici statistici](https://www.istat.it/it/archivio/6789).
+
+La **regione** dell'ente è ricavata dal comune di sede via codice catastale
+(fonte ISTAT), così da essere coerente con il filtro territoriale del pannello.
 
 ## Pubblicazione (GitHub Pages)
 
