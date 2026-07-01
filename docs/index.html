@@ -76,6 +76,7 @@
   .ms-opt:hover { background:var(--it-primary-lighter); }
   .ms-opt input { accent-color:var(--it-primary); }
   .ms-opt.hidden { display:none; }
+  .ms-opt.unavail { display:none; }
   .ms-clear { display:block; width:100%; margin-top:6px; padding:5px; background:transparent; border:1px dashed var(--border); border-radius:4px; color:var(--muted); cursor:pointer; font:inherit; font-size:11px; }
   .ms-clear:hover { color:var(--it-primary); border-color:var(--it-primary); }
   aside .range-row { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:6px; }
@@ -983,8 +984,18 @@ function initMultiSelect(containerId, values, sel, allLabel, onChange) {
   c._reset = () => {
     sel.clear();
     panel.querySelectorAll(".ms-opt input").forEach(cb => cb.checked = false);
-    panel.querySelectorAll(".ms-opt").forEach(o => o.classList.remove("hidden"));
+    panel.querySelectorAll(".ms-opt").forEach(o => o.classList.remove("hidden", "unavail"));
     search.value = ""; updateLabel();
+  };
+  // Ricerca a faccette: nasconde le opzioni non più disponibili in base agli
+  // altri filtri attivi. Un valore già selezionato resta comunque visibile,
+  // così l'utente può deselezionarlo anche se azzera i risultati.
+  c._setAvailable = (available) => {
+    panel.querySelectorAll(".ms-opt").forEach(o => {
+      const cb = o.querySelector("input");
+      const keep = !available || available.has(cb.value) || cb.checked;
+      o.classList.toggle("unavail", !keep);
+    });
   };
   updateLabel();
 }
@@ -1723,18 +1734,32 @@ function swContactsHtml(sw) {
   return ppl.length ? `<div class="sw-contacts">${ppl.join('')}</div>` : '';
 }
 
-function renderEnti() {
-  const sel = entiState.types;
-  const regs = entiState.regioni, cats = entiState.categorie;
-  const enti = ALL_ENTI
-    // Filtri di ente (regione, categoria): scelta multipla in OR dentro ogni
-    // facet, in AND fra le due. Un ente senza regione/categoria (non in IndicePA)
-    // resta escluso quando il rispettivo filtro è attivo.
-    .filter(e => regs.size === 0 || regs.has(e.regione))
-    .filter(e => cats.size === 0 || cats.has(e.categoria))
+// Applica i filtri della vista enti. `skip` permette di escludere una facet dal
+// calcolo (serve alla ricerca a faccette: la disponibilità delle opzioni di una
+// facet si calcola applicando tutte le ALTRE). OR dentro ogni facet, AND fra le facet.
+function entiPassing(skip) {
+  const sel = entiState.types, regs = entiState.regioni, cats = entiState.categorie;
+  return ALL_ENTI
+    .filter(e => skip === "reg" || regs.size === 0 || regs.has(e.regione))
+    .filter(e => skip === "cat" || cats.size === 0 || cats.has(e.categoria))
     // Filtro per tipologia di problema: agisce sui singoli software dell'ente.
     .map(e => sel.size === 0 ? e : { ...e, software: e.software.filter(sw => sw.issues.some(i => sel.has(i.t))) })
     .filter(e => e.software.length > 0);
+}
+
+// Aggiorna le opzioni disponibili nei due dropdown in base agli altri filtri.
+function refreshEntiFacets() {
+  const regC = document.getElementById("ms-enti-reg");
+  const catC = document.getElementById("ms-enti-cat");
+  if (regC && regC._setAvailable)
+    regC._setAvailable(new Set(entiPassing("reg").map(e => e.regione).filter(Boolean)));
+  if (catC && catC._setAvailable)
+    catC._setAvailable(new Set(entiPassing("cat").map(e => e.categoria).filter(Boolean)));
+}
+
+function renderEnti() {
+  refreshEntiFacets();
+  const enti = entiPassing(null);
   // Ordinamento: criterio scelto dall'utente; a parità, fallback su priorità desc per stabilità.
   const sortFn = ENTI_SORT_KEYS[entiState.sort.k] || ENTI_SORT_KEYS.priority;
   const asc = entiState.sort.asc;
