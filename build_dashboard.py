@@ -236,6 +236,11 @@ def enrich(metrics: list[dict], catalog: dict[str, dict], publiccode: dict[str, 
         m2 = dict(m)
         m2["catalog_id"] = cid
         m2["catalog_name"] = pc.get("name", "")
+        # Licenza dichiarata nel publiccode.yml (legal.license): valore autorevole,
+        # coerente col catalogo ufficiale. La licenza già presente in `m["license"]`
+        # è invece quella RILEVATA dall'host del repo (GitHub/GitLab), tenuta come
+        # riscontro perché spesso incompleta (NOASSERTION/vuota) o meno precisa.
+        m2["license_declared"] = ((pc.get("legal") or {}).get("license") or "") if isinstance(pc.get("legal"), dict) else ""
         m2["development_status"] = pc.get("developmentStatus", "")
         m2["release_date"] = pc.get("releaseDate", "")
         m2["organisation_uri"] = org_uri or ""
